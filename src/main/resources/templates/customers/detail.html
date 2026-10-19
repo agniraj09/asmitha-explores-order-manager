@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Customer')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar(${activeTab})}"></nav>
+
+<div class="container pb-5">
+    <div th:replace="~{fragments/layout :: alerts}"></div>
+
+    <div class="row g-4">
+        <div class="col-12 col-lg-4">
+            <div class="card">
+                <div class="card-body">
+                    <h1 class="h4 page-title" th:text="${customer.name}">Name</h1>
+                    <p class="mb-1"><i class="bi bi-telephone"></i>
+                        <a th:href="'tel:+91' + ${customer.mobileNumber}" th:text="${customer.mobileNumber}">mobile</a>
+                    </p>
+                    <p class="text-muted wrap-notes mb-3" th:text="${customer.address}">Address</p>
+                    <p class="mb-3">Total orders:
+                        <span class="badge text-bg-secondary" th:text="${customer.numberOfOrders}">0</span>
+                    </p>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a class="btn btn-outline-secondary btn-sm"
+                           th:href="@{'/customers/' + ${customer.id} + '/edit'}">Edit</a>
+                        <a class="btn btn-primary btn-sm"
+                           th:href="@{/orders/new(customerId=${customer.id})}">New order</a>
+                        <a class="btn btn-link btn-sm" th:href="@{/customers}">Back to list</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-8">
+            <div class="card">
+                <div class="card-header">Order history</div>
+                <div class="table-responsive table-stack-wrap">
+                    <table class="table table-hover table-stack align-middle mb-0">
+                        <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Date</th>
+                            <th>Items</th>
+                            <th>Status</th>
+                            <th class="text-end">Total</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="o : ${orders}">
+                            <td class="cell-hide-sm"><a th:href="@{'/orders/' + ${o.id}}" th:text="${o.id}">1</a></td>
+                            <td class="cell-title" data-label="Date">
+                                <a th:href="@{'/orders/' + ${o.id}}">Order #<span th:text="${o.id}">1</span></a>
+                                <div class="small text-muted"
+                                     th:text="${#temporals.format(o.orderDate, 'dd MMM yyyy')}">date
+                                </div>
+                            </td>
+                            <td class="small" data-label="Items" th:text="${o.itemsSummary}">items</td>
+                            <td data-label="Status"><span
+                                    th:replace="~{fragments/layout :: statusBadge(${o.orderStatus})}"></span></td>
+                            <td class="text-end money" data-label="Total">₹<span
+                                    th:text="${#numbers.formatDecimal(o.totalAmount, 1, 'COMMA', 2, 'POINT')}">0.00</span>
+                            </td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(orders)}">
+                            <td colspan="5" class="text-center text-muted py-4 cell-empty">No orders yet.</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>
+

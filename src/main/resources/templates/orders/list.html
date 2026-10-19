@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Orders')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar(${activeTab})}"></nav>
+
+<div class="container pb-5">
+    <div th:replace="~{fragments/layout :: alerts}"></div>
+
+    <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3 page-header">
+        <h1 class="h3 page-title mb-0">Orders</h1>
+        <a class="btn btn-primary d-none d-lg-inline-flex" th:href="@{/orders/new}"><i class="bi bi-plus-lg"></i> New
+            order</a>
+    </div>
+
+    <form class="card card-body mb-3" method="get" th:action="@{/orders}" th:object="${filter}">
+        <button class="btn btn-outline-secondary d-lg-none w-100 justify-content-between" type="button"
+                data-bs-toggle="collapse" data-bs-target="#filterFields" aria-expanded="false"
+                aria-controls="filterFields">
+            <span><i class="bi bi-funnel"></i> Filters</span>
+            <span class="badge text-bg-secondary" th:unless="${#maps.isEmpty(param)}">on</span>
+            <i class="bi bi-chevron-down" th:if="${#maps.isEmpty(param)}"></i>
+        </button>
+        <div class="collapse d-lg-block" id="filterFields"
+             th:classappend="${#maps.isEmpty(param)} ? '' : 'show'">
+            <div class="row g-2 align-items-end">
+                <div class="col-12 col-md-3">
+                    <label class="form-label" for="status">Status</label>
+                    <select id="status" class="form-select" th:field="*{status}">
+                        <option value="">All statuses</option>
+                        <option th:each="s : ${statuses}" th:value="${s.name()}" th:text="${s.label}">Status</option>
+                    </select>
+                </div>
+                <div class="col-12 col-md-3">
+                    <label class="form-label" for="customerId">Customer</label>
+                    <select id="customerId" class="form-select" th:field="*{customerId}">
+                        <option value="">All customers</option>
+                        <option th:each="c : ${customers}" th:value="${c.id}" th:text="${c.name}">Customer</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label" for="fromDate">From</label>
+                    <input id="fromDate" type="date" class="form-control" th:field="*{fromDate}">
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label" for="toDate">To</label>
+                    <input id="toDate" type="date" class="form-control" th:field="*{toDate}">
+                </div>
+                <div class="col-12 col-md-2 d-flex gap-2">
+                    <button class="btn btn-outline-secondary flex-fill" type="submit">Filter</button>
+                    <a class="btn btn-link" th:href="@{/orders}">Reset</a>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <div class="card">
+        <div class="table-responsive table-stack-wrap">
+            <table class="table table-hover table-stack align-middle mb-0">
+                <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Date</th>
+                    <th>Customer</th>
+                    <th>Items</th>
+                    <th>Status</th>
+                    <th>Tracking</th>
+                    <th class="text-end">Total</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="o : ${orders}">
+                    <td class="cell-hide-sm"><a th:href="@{'/orders/' + ${o.id}}" th:text="${o.id}">1</a></td>
+                    <td class="text-nowrap" data-label="Date"
+                        th:text="${#temporals.format(o.orderDate, 'dd MMM yyyy')}">date
+                    </td>
+                    <td class="cell-title" data-label="Customer">
+                        <a th:href="@{'/customers/' + ${o.customerId}}"><span class="d-lg-none text-muted">#<span
+                                th:text="${o.id}">1</span> · </span><span th:text="${o.customerName}">Customer</span></a>
+                        <div class="small text-muted">
+                            <a class="text-muted" th:href="'tel:+91' + ${o.customerMobileNumber}"
+                               th:text="${o.customerMobileNumber}">mobile</a>
+                        </div>
+                    </td>
+                    <td class="small" data-label="Items" th:text="${o.itemsSummary}">items</td>
+                    <td data-label="Status">
+                        <span>
+                            <span th:replace="~{fragments/layout :: statusBadge(${o.orderStatus})}"></span>
+                            <span class="small days-open text-nowrap d-block" th:unless="${o.delivered}"
+                                  th:text="'open ' + ${o.daysOpenLabel}">open 3 days</span>
+                        </span>
+                    </td>
+                    <td class="small" data-label="Tracking" th:text="${o.trackingId} ?: '—'">—</td>
+                    <td class="text-end money" data-label="Total">₹<span
+                            th:text="${#numbers.formatDecimal(o.totalAmount, 1, 'COMMA', 2, 'POINT')}">0.00</span></td>
+                    <td class="text-end text-nowrap cell-actions">
+                        <a class="btn btn-sm btn-outline-secondary" th:if="${o.editable}"
+                           th:href="@{'/orders/' + ${o.id} + '/edit'}">Edit</a>
+                        <a class="btn btn-sm btn-outline-primary" th:href="@{'/orders/' + ${o.id}}">Open</a>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(orders)}">
+                    <td colspan="8" class="text-center text-muted py-4 cell-empty">No orders match these filters.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>
+

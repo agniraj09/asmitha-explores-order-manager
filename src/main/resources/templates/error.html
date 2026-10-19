@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Error')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar('')}"></nav>
+
+<div class="container pb-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-7">
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <div class="display-6 mb-3">😕</div>
+                    <div class="text-muted small mb-2" th:if="${status}">
+                        Error <span th:text="${status}">500</span>
+                        <span th:if="${path}"> · <span th:text="${path}">/path</span></span>
+                    </div>
+                    <h1 class="h4 page-title"
+                        th:text="${!#strings.isEmpty(errorTitle)} ? ${errorTitle} : (${status == 404} ? 'Page not found' : 'Something went wrong')">
+                        Something went wrong</h1>
+                    <p class="text-muted"
+                       th:text="${!#strings.isEmpty(errorMessage)} ? ${errorMessage} : (${!#strings.isEmpty(message)} ? ${message} : 'The page you were looking for is not available.')">
+                        Please try again.</p>
+                    <a class="btn btn-primary" th:href="@{/}">Back to dashboard</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>
+

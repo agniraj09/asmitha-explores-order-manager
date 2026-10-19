@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Customers')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar(${activeTab})}"></nav>
+
+<div class="container pb-5">
+    <div th:replace="~{fragments/layout :: alerts}"></div>
+
+    <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3 page-header">
+        <h1 class="h3 page-title mb-0">Customers</h1>
+        <a class="btn btn-primary" th:href="@{/customers/new}"><i class="bi bi-person-plus"></i> Add customer</a>
+    </div>
+
+    <form class="row g-2 mb-3" method="get" th:action="@{/customers}">
+        <div class="col-12 col-sm-8 col-md-6">
+            <input type="search" class="form-control" name="search" th:value="${search}"
+                   inputmode="search" enterkeyhint="search" autocomplete="off" autocapitalize="none"
+                   placeholder="Search by name or mobile number">
+        </div>
+        <div class="col">
+            <button class="btn btn-outline-secondary w-100" type="submit">Search</button>
+        </div>
+        <div class="col-auto" th:if="${search != null and !search.isEmpty()}">
+            <a class="btn btn-link" th:href="@{/customers}">Clear</a>
+        </div>
+    </form>
+
+    <div class="card">
+        <div class="table-responsive table-stack-wrap">
+            <table class="table table-hover table-stack align-middle mb-0">
+                <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Mobile</th>
+                    <th>Address</th>
+                    <th class="text-center">Orders</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="c : ${customers}">
+                    <td class="cell-title" data-label="Name"><a th:href="@{'/customers/' + ${c.id}}"
+                                                                th:text="${c.name}">Name</a></td>
+                    <td data-label="Mobile"><a th:href="'tel:+91' + ${c.mobileNumber}"
+                                               th:text="${c.mobileNumber}">9999999999</a></td>
+                    <td class="small text-muted wrap-notes" data-label="Address" th:text="${c.address}">Address</td>
+                    <td class="text-center" data-label="Orders">
+                        <span class="badge text-bg-secondary" th:text="${c.numberOfOrders}">0</span>
+                    </td>
+                    <td class="text-end text-nowrap cell-actions">
+                        <a class="btn btn-sm btn-outline-primary d-lg-none" th:href="@{'/customers/' + ${c.id}}">Open</a>
+                        <a class="btn btn-sm btn-outline-secondary" th:href="@{'/customers/' + ${c.id} + '/edit'}">Edit</a>
+                        <form class="d-inline" method="post" th:action="@{'/customers/' + ${c.id} + '/delete'}"
+                              onsubmit="return confirm('Delete this customer?');">
+                            <button class="btn btn-sm btn-outline-danger" type="submit"
+                                    th:disabled="${c.numberOfOrders > 0}"
+                                    th:title="${c.numberOfOrders > 0} ? 'Customer has orders' : 'Delete'">Delete
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(customers)}">
+                    <td colspan="5" class="text-center text-muted py-4 cell-empty">No customers found.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>
+
+

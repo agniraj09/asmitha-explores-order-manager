@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:fragment="head(title)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#667eea">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="format-detection" content="telephone=yes">
+    <title th:text="|${title} · Asmitha Explores|">Asmitha Explores</title>
+    <link rel="icon" type="image/png" th:href="@{/images/logo.png}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap"
+          rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
+          crossorigin="anonymous">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet"
+          crossorigin="anonymous">
+    <link th:href="@{/css/app.css}" rel="stylesheet">
+</head>
+<body>
+
+<!-- ============================ NAVBAR ============================ -->
+<div th:fragment="navbar(activeTab)">
+    <nav class="app-header navbar navbar-expand-lg mb-3 mb-lg-4">
+        <div class="container">
+            <a class="navbar-brand" th:href="@{/}">
+                <img th:src="@{/images/logo.png}" alt="Asmitha Explores" class="logo-img"
+                     onerror="this.style.display='none'">
+                <span>
+                    <span class="logo-name">Asmitha Explores</span>
+                    <span class="logo-tagline">Order Tracker</span>
+                </span>
+            </a>
+            <a class="btn btn-brand-cta btn-sm d-lg-none ms-auto" th:href="@{/orders/new}"
+               aria-label="New order"><i class="bi bi-plus-lg"></i> New</a>
+            <button class="navbar-toggler d-none d-lg-inline-flex" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false"
+                    aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse d-none d-lg-flex" id="mainNav">
+                <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-lg-center gap-lg-1">
+                    <li class="nav-item">
+                        <a class="nav-link" th:classappend="${activeTab == 'dashboard'} ? 'active'"
+                           th:href="@{/}"><i class="bi bi-speedometer2 me-1"></i>Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" th:classappend="${activeTab == 'orders'} ? 'active'"
+                           th:href="@{/orders}"><i class="bi bi-receipt me-1"></i>Orders</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" th:classappend="${activeTab == 'customers'} ? 'active'"
+                           th:href="@{/customers}"><i class="bi bi-people me-1"></i>Customers</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" th:classappend="${activeTab == 'products'} ? 'active'"
+                           th:href="@{/products}"><i class="bi bi-box-seam me-1"></i>Inventory</a>
+                    </li>
+                    <li class="nav-item ms-lg-2">
+                        <a class="btn btn-brand-cta w-100" th:href="@{/orders/new}">
+                            <i class="bi bi-plus-lg"></i> New order
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Mobile bottom tab bar -->
+    <nav class="mobile-tabbar d-lg-none" aria-label="Main navigation">
+        <a class="tab-item" th:classappend="${activeTab == 'dashboard'} ? 'active'" th:href="@{/}">
+            <i class="bi bi-speedometer2"></i><span>Home</span>
+        </a>
+        <a class="tab-item" th:classappend="${activeTab == 'orders'} ? 'active'" th:href="@{/orders}">
+            <i class="bi bi-receipt"></i><span>Orders</span>
+        </a>
+        <a class="tab-item tab-cta" th:href="@{/orders/new}" aria-label="Create new order">
+            <i class="bi bi-plus-lg"></i><span>New</span>
+        </a>
+        <a class="tab-item" th:classappend="${activeTab == 'customers'} ? 'active'" th:href="@{/customers}">
+            <i class="bi bi-people"></i><span>People</span>
+        </a>
+        <a class="tab-item" th:classappend="${activeTab == 'products'} ? 'active'" th:href="@{/products}">
+            <i class="bi bi-box-seam"></i><span>Stock</span>
+        </a>
+    </nav>
+</div>
+
+<!-- ============================ ALERTS ============================ -->
+<div th:fragment="alerts">
+    <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="alert">
+        <span th:text="${successMessage}">Saved</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <span th:text="${errorMessage}">Error</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    <div th:if="${warningMessages}" class="alert alert-warning alert-dismissible fade show" role="alert">
+        <div class="fw-semibold mb-1">Stock warning</div>
+        <ul class="mb-0 ps-3">
+            <li th:each="w : ${warningMessages}" th:text="${w}">warning</li>
+        </ul>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+</div>
+
+<!-- ============================ FOOTER / SCRIPTS ============================ -->
+<div th:fragment="scripts">
+    <footer class="app-footer text-center">
+        Asmitha Explores <span class="brand-dot">•</span> Order Tracker
+        <div class="mt-1" style="letter-spacing:.14em; font-size:.68rem; text-transform:uppercase;">
+            Learn • Play • Explore
+        </div>
+    </footer>
+    <div class="tabbar-spacer d-lg-none" aria-hidden="true"></div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+            crossorigin="anonymous"></script>
+</div>
+
+<!-- ============================ STATUS BADGE ============================ -->
+<span th:fragment="statusBadge(status)" class="badge"
+      th:classappend="'text-bg-' + ${status.badgeClass}"
+      th:text="${status.label}">Status</span>
+
+</body>
+</html>
+

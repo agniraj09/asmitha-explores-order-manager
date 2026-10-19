@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Order form')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar(${activeTab})}"></nav>
+
+<div class="container pb-5">
+    <div th:replace="~{fragments/layout :: alerts}"></div>
+
+    <h1 class="h3 page-title mb-3" th:text="${orderForm.id} == null ? 'New order' : 'Edit order #' + ${orderForm.id}">New
+        order</h1>
+    <div class="alert alert-info py-2" th:if="${orderForm.id} != null">
+        Editing is only possible while the order is <strong>New</strong>. Stock is corrected automatically
+        when you save.
+    </div>
+
+    <form method="post"
+          th:action="${orderForm.id} == null ? @{/orders} : @{'/orders/' + ${orderForm.id} + '/edit'}"
+          th:object="${orderForm}" novalidate>
+        <input type="hidden" th:field="*{id}">
+        <div class="row g-4">
+            <!-- Customer -->
+            <div class="col-12 col-lg-5">
+                <div class="card h-100">
+                    <div class="card-header">Customer</div>
+                    <div class="card-body">
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="newCustomer" th:field="*{newCustomer}"
+                                   onchange="toggleCustomerMode()">
+                            <label class="form-check-label" for="newCustomer">
+                                Add a new customer
+                                <span class="text-muted small">(uncheck to pick an existing one)</span>
+                            </label>
+                        </div>
+
+                        <div id="existingCustomerBlock">
+                            <label class="form-label" for="customerId">Select customer</label>
+                            <select id="customerId" class="form-select" th:field="*{customerId}"
+                                    th:classappend="${#fields.hasErrors('customerId')} ? 'is-invalid'">
+                                <option value="">-- choose --</option>
+                                <option th:each="c : ${customers}" th:value="${c.id}"
+                                        th:text="${c.name} + ' · ' + ${c.mobileNumber}">Customer
+                                </option>
+                            </select>
+                            <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('customerId')}"
+                                 th:errors="*{customerId}">error
+                            </div>
+                        </div>
+
+                        <div id="newCustomerBlock" class="d-none">
+                            <div class="mb-3">
+                                <label class="form-label" for="newCustomerName">Name</label>
+                                <input id="newCustomerName" type="text" class="form-control"
+                                       th:field="*{newCustomerName}"
+                                       autocomplete="name" autocapitalize="words" enterkeyhint="next"
+                                       th:classappend="${#fields.hasErrors('newCustomerName')} ? 'is-invalid'">
+                                <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('newCustomerName')}"
+                                     th:errors="*{newCustomerName}">error
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="newCustomerMobileNumber">Mobile number</label>
+                                <input id="newCustomerMobileNumber" type="tel" inputmode="numeric" maxlength="10"
+                                       pattern="[0-9]{10}" autocomplete="tel-national" enterkeyhint="next"
+                                       class="form-control" th:field="*{newCustomerMobileNumber}"
+                                       th:classappend="${#fields.hasErrors('newCustomerMobileNumber')} ? 'is-invalid'">
+                                <div class="invalid-feedback d-block"
+                                     th:if="${#fields.hasErrors('newCustomerMobileNumber')}"
+                                     th:errors="*{newCustomerMobileNumber}">error
+                                </div>
+                            </div>
+                            <div class="mb-1">
+                                <label class="form-label" for="newCustomerAddress">Address</label>
+                                <textarea id="newCustomerAddress" rows="3" class="form-control"
+                                          th:field="*{newCustomerAddress}"
+                                          autocomplete="street-address" autocapitalize="sentences"
+                                          th:classappend="${#fields.hasErrors('newCustomerAddress')} ? 'is-invalid'"></textarea>
+                                <div class="invalid-feedback d-block"
+                                     th:if="${#fields.hasErrors('newCustomerAddress')}"
+                                     th:errors="*{newCustomerAddress}">error
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr>
+                        <div class="mb-3">
+                            <label class="form-label" for="orderDate">Order date</label>
+                            <input id="orderDate" type="date" class="form-control" th:field="*{orderDate}"
+                                   th:classappend="${#fields.hasErrors('orderDate')} ? 'is-invalid'">
+                            <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('orderDate')}"
+                                 th:errors="*{orderDate}">error
+                            </div>
+                        </div>
+                        <div>
+                            <label class="form-label" for="customizationNotes">Customization notes</label>
+                            <textarea id="customizationNotes" rows="4" class="form-control"
+                                      placeholder="Names to print, colours, theme, gift wrap ..."
+                                      th:field="*{customizationNotes}"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Items -->
+            <div class="col-12 col-lg-7">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span class="fw-semibold">Products</span>
+                        <button class="btn btn-sm btn-outline-primary" type="button" onclick="addRow()">
+                            <i class="bi bi-plus-lg"></i> Add product
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-danger py-2" th:if="${#fields.hasErrors('items')}"
+                             th:errors="*{items}">error
+                        </div>
+
+                        <div id="itemRows">
+                            <div class="item-row border rounded p-2 mb-2" th:each="item, stat : *{items}">
+                                <div class="row g-2 align-items-center">
+                                    <div class="col-12 col-md-6">
+                                        <select class="form-select form-select-sm item-product"
+                                                th:field="*{items[__${stat.index}__].productId}"
+                                                onchange="recalculate()">
+                                            <option value="">-- choose product --</option>
+                                            <optgroup th:each="group : ${productsByCategory}" th:label="${group.key}">
+                                                <option th:each="p : ${group.value}" th:value="${p.id}"
+                                                        th:data-price="${p.price}"
+                                                        th:data-stock="${p.quantityInHand}"
+                                                        th:text="${p.name} + ' · ₹' + ${#numbers.formatDecimal(p.price,1,'COMMA',2,'POINT')}">
+                                                    Product
+                                                </option>
+                                            </optgroup>
+                                        </select>
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <div class="input-group input-group-sm">
+                                            <button class="btn btn-outline-secondary" type="button"
+                                                    onclick="stepQty(this, -1)" aria-label="Decrease quantity"
+                                                    title="Decrease">&minus;</button>
+                                            <input type="number" min="1" inputmode="numeric"
+                                                   class="form-control text-center item-qty"
+                                                   placeholder="Qty" oninput="recalculate()"
+                                                   th:field="*{items[__${stat.index}__].quantity}">
+                                            <button class="btn btn-outline-secondary" type="button"
+                                                    onclick="stepQty(this, 1)" aria-label="Increase quantity"
+                                                    title="Increase">+</button>
+                                        </div>
+                                    </div>
+                                    <div class="col-4 col-md-2 text-end small fw-semibold item-total">₹0.00</div>
+                                    <div class="col-2 col-md-1 text-end">
+                                        <button class="btn btn-sm btn-outline-danger" type="button"
+                                                onclick="removeRow(this)" aria-label="Remove this product"
+                                                title="Remove this product">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="small text-warning-emphasis mt-1 item-hint d-none"></div>
+                                <div class="small text-danger mt-1"
+                                     th:if="${#fields.hasErrors('items[__${stat.index}__].productId')}"
+                                     th:errors="*{items[__${stat.index}__].productId}">error
+                                </div>
+                                <div class="small text-danger mt-1"
+                                     th:if="${#fields.hasErrors('items[__${stat.index}__].quantity')}"
+                                     th:errors="*{items[__${stat.index}__].quantity}">error
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="noItems" class="text-center text-muted border rounded border-dashed py-4 mb-2 d-none">
+                            No products in this order yet — click <strong>Add product</strong>.
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center border-top pt-2 mt-3">
+                            <span class="text-muted small">
+                                <span id="itemCount">0</span> product line(s)
+                            </span>
+                            <span class="fw-semibold">Total: ₹<span id="orderTotal">0.00</span></span>
+                        </div>
+
+                        <p class="text-muted small mb-0 mt-2">
+                            If stock is not enough the order is still saved and the shortfall is added to
+                            “quantity to be ordered”.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2 mt-4 form-actions-sticky">
+            <button class="btn btn-primary flex-fill flex-lg-grow-0" type="submit"
+                    th:text="${orderForm.id} == null ? 'Create order' : 'Save changes'">Create order
+            </button>
+            <a class="btn btn-outline-secondary flex-fill flex-lg-grow-0"
+               th:href="${orderForm.id} == null ? @{/orders} : @{'/orders/' + ${orderForm.id}}">Cancel</a>
+        </div>
+    </form>
+
+    <!-- Blank row used by "Add product" (never submitted - it lives outside the form) -->
+    <template id="itemRowTemplate">
+        <div class="item-row border rounded p-2 mb-2">
+            <div class="row g-2 align-items-center">
+                <div class="col-12 col-md-6">
+                    <select class="form-select form-select-sm item-product" name="items[__INDEX__].productId"
+                            onchange="recalculate()">
+                        <option value="">-- choose product --</option>
+                        <optgroup th:each="group : ${productsByCategory}" th:label="${group.key}">
+                            <option th:each="p : ${group.value}" th:value="${p.id}"
+                                    th:data-price="${p.price}"
+                                    th:data-stock="${p.quantityInHand}"
+                                    th:text="${p.name} + ' · ₹' + ${#numbers.formatDecimal(p.price,1,'COMMA',2,'POINT')}">
+                                Product
+                            </option>
+                        </optgroup>
+                    </select>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="input-group input-group-sm">
+                        <button class="btn btn-outline-secondary" type="button"
+                                onclick="stepQty(this, -1)" aria-label="Decrease quantity"
+                                title="Decrease">&minus;</button>
+                        <input type="number" min="1" value="1" inputmode="numeric"
+                               class="form-control text-center item-qty"
+                               placeholder="Qty" oninput="recalculate()" name="items[__INDEX__].quantity">
+                        <button class="btn btn-outline-secondary" type="button"
+                                onclick="stepQty(this, 1)" aria-label="Increase quantity" title="Increase">+</button>
+                    </div>
+                </div>
+                <div class="col-4 col-md-2 text-end small fw-semibold item-total">₹0.00</div>
+                <div class="col-2 col-md-1 text-end">
+                    <button class="btn btn-sm btn-outline-danger" type="button"
+                            onclick="removeRow(this)" aria-label="Remove this product"
+                            title="Remove this product">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="small text-warning-emphasis mt-1 item-hint d-none"></div>
+        </div>
+    </template>
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    function toggleCustomerMode() {
+        const isNew = document.getElementById('newCustomer').checked;
+        document.getElementById('newCustomerBlock').classList.toggle('d-none', !isNew);
+        document.getElementById('existingCustomerBlock').classList.toggle('d-none', isNew);
+    }
+
+    function rows() {
+        return Array.from(document.querySelectorAll('#itemRows .item-row'));
+    }
+
+    /** Keeps items[0..n] contiguous so Spring can bind the list after add/remove. */
+    function reindexRows() {
+        rows().forEach(function (row, index) {
+            const product = row.querySelector('.item-product');
+            const qty = row.querySelector('.item-qty');
+            product.name = 'items[' + index + '].productId';
+            product.id = 'items' + index + '.productId';
+            qty.name = 'items[' + index + '].quantity';
+            qty.id = 'items' + index + '.quantity';
+        });
+        document.getElementById('noItems').classList.toggle('d-none', rows().length > 0);
+        document.getElementById('itemCount').textContent = rows().length;
+    }
+
+    function addRow(productId, quantity) {
+        const fragment = document.getElementById('itemRowTemplate').content.cloneNode(true);
+        const row = fragment.querySelector('.item-row');
+        if (productId) {
+            row.querySelector('.item-product').value = productId;
+        }
+        if (quantity) {
+            row.querySelector('.item-qty').value = quantity;
+        }
+        document.getElementById('itemRows').appendChild(fragment);
+        reindexRows();
+        recalculate();
+        const added = rows()[rows().length - 1];
+        added.querySelector('.item-product').focus();
+        added.scrollIntoView({behavior: 'smooth', block: 'center'});
+    }
+
+    function removeRow(button) {
+        button.closest('.item-row').remove();
+        reindexRows();
+        recalculate();
+    }
+
+    function stepQty(button, delta) {
+        const input = button.parentElement.querySelector('.item-qty');
+        const current = parseInt(input.value, 10);
+        const next = (isNaN(current) ? 0 : current) + delta;
+        input.value = next < 1 ? 1 : next;
+        recalculate();
+    }
+
+    /** Live line totals, order total and "not enough stock" hints. */
+    function recalculate() {
+        let total = 0;
+        rows().forEach(function (row) {
+            const select = row.querySelector('.item-product');
+            const option = select.options[select.selectedIndex];
+            const qtyRaw = parseInt(row.querySelector('.item-qty').value, 10);
+            const qty = isNaN(qtyRaw) || qtyRaw < 1 ? 0 : qtyRaw;
+            const price = option && option.dataset.price ? parseFloat(option.dataset.price) : 0;
+            const stock = option && option.dataset.stock ? parseInt(option.dataset.stock, 10) : 0;
+
+            const lineTotal = price * qty;
+            total += lineTotal;
+            row.querySelector('.item-total').textContent =
+                '₹' + lineTotal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+            const hint = row.querySelector('.item-hint');
+            if (option && option.value && qty > stock) {
+                hint.textContent = '⚠ Only ' + stock + ' in hand - ' + (qty - stock)
+                    + ' will be added to "to be ordered".';
+                hint.classList.remove('d-none');
+            } else {
+                hint.classList.add('d-none');
+            }
+        });
+        document.getElementById('orderTotal').textContent =
+            total.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        toggleCustomerMode();
+        reindexRows();
+        recalculate();
+    });
+    /*]]>*/
+</script>
+</body>
+</html>

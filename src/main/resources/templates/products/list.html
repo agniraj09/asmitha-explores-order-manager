@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Inventory')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar(${activeTab})}"></nav>
+
+<div class="container pb-5">
+    <div th:replace="~{fragments/layout :: alerts}"></div>
+
+    <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3 page-header">
+        <div>
+            <h1 class="h3 page-title mb-0">Inventory</h1>
+            <small class="text-muted">
+                <span th:text="${#lists.size(products)}">0</span> product(s) ·
+                <span th:text="${#lists.size(products.?[outOfStock])}">0</span> out of stock
+            </small>
+        </div>
+        <a class="btn btn-primary" th:href="@{/products/new}"><i class="bi bi-plus-lg"></i> Add product</a>
+    </div>
+
+    <div class="card">
+        <div class="table-responsive table-stack-wrap">
+            <table class="table table-hover table-stack align-middle mb-0">
+                <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Category</th>
+                    <th class="text-end">Price</th>
+                    <th class="text-center">In hand</th>
+                    <th class="text-center">To be ordered</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="p : ${products}" th:classappend="${p.rowClass}">
+                    <td class="cell-title" data-label="Product">
+                        <span th:text="${p.name}">Product</span>
+                        <span class="badge text-bg-danger ms-1" th:if="${p.outOfStock}">Out of stock</span>
+                    </td>
+                    <td data-label="Category">
+                        <span class="badge category-pill" th:attr="data-category=${p.category}"
+                              th:text="${p.category} ?: 'Other'">Category</span>
+                    </td>
+                    <td class="text-end money" data-label="Price">₹<span
+                            th:text="${#numbers.formatDecimal(p.price, 1, 'COMMA', 2, 'POINT')}">0.00</span></td>
+                    <td class="text-center" data-label="In hand" th:text="${p.quantityInHand}">0</td>
+                    <td class="text-center" data-label="To be ordered" th:text="${p.quantityToBeOrdered}">0</td>
+                    <td class="text-end text-nowrap cell-actions">
+                        <a class="btn btn-sm btn-outline-secondary" th:href="@{'/products/' + ${p.id} + '/edit'}">Edit</a>
+                        <form class="d-inline" method="post" th:action="@{'/products/' + ${p.id} + '/delete'}"
+                              onsubmit="return confirm('Delete this product?');">
+                            <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(products)}">
+                    <td colspan="6" class="text-center text-muted py-4 cell-empty">No products yet.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>
+

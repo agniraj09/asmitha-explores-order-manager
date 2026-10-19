@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Customer form')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar(${activeTab})}"></nav>
+
+<div class="container pb-5">
+    <div th:replace="~{fragments/layout :: alerts}"></div>
+
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-7">
+            <div class="card">
+                <div class="card-body">
+                    <h1 class="h4 page-title mb-3" th:text="${editing} ? 'Edit customer' : 'Add customer'">Add customer</h1>
+
+                    <form method="post" th:action="@{/customers/save}" th:object="${customerForm}" novalidate>
+                        <input type="hidden" th:field="*{id}">
+
+                        <div class="mb-3">
+                            <label class="form-label" for="name">Name</label>
+                            <input id="name" type="text" class="form-control" th:field="*{name}"
+                                   autocomplete="name" autocapitalize="words" enterkeyhint="next"
+                                   th:classappend="${#fields.hasErrors('name')} ? 'is-invalid'">
+                            <div class="invalid-feedback" th:if="${#fields.hasErrors('name')}"
+                                 th:errors="*{name}">error
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label" for="mobileNumber">Mobile number</label>
+                            <input id="mobileNumber" type="tel" inputmode="numeric" maxlength="10"
+                                   pattern="[0-9]{10}" autocomplete="tel-national" enterkeyhint="next"
+                                   class="form-control" th:field="*{mobileNumber}"
+                                   th:classappend="${#fields.hasErrors('mobileNumber')} ? 'is-invalid'">
+                            <div class="form-text">10 digits, e.g. 9840012345</div>
+                            <div class="invalid-feedback" th:if="${#fields.hasErrors('mobileNumber')}"
+                                 th:errors="*{mobileNumber}">error
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label" for="address">Address</label>
+                            <textarea id="address" rows="4" class="form-control" th:field="*{address}"
+                                      autocomplete="street-address" autocapitalize="sentences"
+                                      th:classappend="${#fields.hasErrors('address')} ? 'is-invalid'"></textarea>
+                            <div class="invalid-feedback" th:if="${#fields.hasErrors('address')}"
+                                 th:errors="*{address}">error
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-primary flex-fill flex-lg-grow-0" type="submit">Save</button>
+                            <a class="btn btn-outline-secondary flex-fill flex-lg-grow-0"
+                               th:href="@{/customers}">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>
+

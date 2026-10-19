@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Order detail')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar(${activeTab})}"></nav>
+
+<div class="container pb-5">
+    <div th:replace="~{fragments/layout :: alerts}"></div>
+
+    <div class="d-flex flex-wrap gap-2 justify-content-between align-items-start mb-3">
+        <div>
+            <h1 class="h3 page-title mb-1">Order #<span th:text="${order.id}">1</span></h1>
+            <span th:replace="~{fragments/layout :: statusBadge(${order.orderStatus})}"></span>
+            <span class="text-muted ms-2"
+                  th:text="${#temporals.format(order.orderDate, 'dd MMM yyyy')}">date</span>
+        </div>
+        <div class="d-flex flex-wrap gap-2 w-100 w-lg-auto order-actions">
+            <a class="btn btn-outline-secondary flex-fill flex-lg-grow-0" th:href="@{/orders}">
+                <i class="bi bi-arrow-left"></i> Back
+            </a>
+            <a class="btn btn-primary flex-fill flex-lg-grow-0" th:if="${order.editable}"
+               th:href="@{'/orders/' + ${order.id} + '/edit'}">
+                <i class="bi bi-pencil"></i> Edit order
+            </a>
+            <form method="post" class="flex-fill flex-lg-grow-0"
+                  th:action="@{'/orders/' + ${order.id} + '/delete'}"
+                  onsubmit="return confirm('Delete this order? Stock will be restored.');">
+                <button class="btn btn-outline-danger w-100" type="submit">
+                    <i class="bi bi-trash"></i> Cancel / delete
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Left: customer + items -->
+        <div class="col-12 col-lg-7">
+            <div class="card mb-4">
+                <div class="card-header">Customer</div>
+                <div class="card-body">
+                    <p class="mb-1">
+                        <a th:href="@{'/customers/' + ${order.customerId}}" th:text="${order.customerName}">Name</a>
+                    </p>
+                    <p class="mb-2">
+                        <a th:href="'tel:+91' + ${order.customerMobileNumber}"
+                           th:text="${order.customerMobileNumber}">mobile</a>
+                    </p>
+                    <p class="text-muted wrap-notes mb-3" th:text="${order.customerAddress}">Address</p>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a class="btn btn-sm btn-outline-primary flex-fill flex-sm-grow-0"
+                           th:href="'tel:+91' + ${order.customerMobileNumber}">
+                            <i class="bi bi-telephone"></i> Call
+                        </a>
+                        <a class="btn btn-sm btn-success flex-fill flex-sm-grow-0"
+                           th:href="'https://wa.me/91' + ${order.customerMobileNumber}" target="_blank" rel="noopener">
+                            <i class="bi bi-whatsapp"></i> WhatsApp
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">Items</div>
+                <div class="table-responsive table-stack-wrap">
+                    <table class="table table-stack align-middle mb-0">
+                        <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th class="text-center">Qty</th>
+                            <th class="text-end">Unit price</th>
+                            <th class="text-end">Line total</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="i : ${order.items}">
+                            <td class="cell-title" data-label="Product" th:text="${i.productName}">Product</td>
+                            <td class="text-center" data-label="Qty" th:text="${i.quantity}">1</td>
+                            <td class="text-end" data-label="Unit price">₹<span
+                                    th:text="${#numbers.formatDecimal(i.unitPrice,1,'COMMA',2,'POINT')}">0.00</span>
+                            </td>
+                            <td class="text-end money" data-label="Line total">₹<span
+                                    th:text="${#numbers.formatDecimal(i.lineTotal,1,'COMMA',2,'POINT')}">0.00</span>
+                            </td>
+                        </tr>
+                        </tbody>
+                        <tfoot>
+                        <tr class="fw-semibold">
+                            <td colspan="3" class="text-end cell-hide-sm">Total</td>
+                            <td class="text-end money" data-label="Order total">₹<span
+                                    th:text="${#numbers.formatDecimal(order.totalAmount,1,'COMMA',2,'POINT')}">0.00</span>
+                            </td>
+                        </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: status + edit -->
+        <div class="col-12 col-lg-5">
+            <div class="card mb-4">
+                <div class="card-header">Status</div>
+                <div class="card-body">
+                    <p class="mb-2">
+                        Current: <span th:replace="~{fragments/layout :: statusBadge(${order.orderStatus})}"></span>
+                    </p>
+
+                    <div th:if="${order.nextStatus == null}" class="alert alert-success mb-0">
+                        This order is delivered. Nothing more to do. 🎉
+                    </div>
+
+                    <form th:if="${order.nextStatus != null}" method="post"
+                          th:action="@{'/orders/' + ${order.id} + '/status'}">
+                        <input type="hidden" name="targetStatus" th:value="${order.nextStatus.name()}">
+                        <div class="mb-3" th:if="${order.nextStatus.name() == 'SHIPPED'}">
+                            <label class="form-label" for="statusTrackingId">Tracking id (required to ship)</label>
+                            <input id="statusTrackingId" name="trackingId" type="text" class="form-control"
+                                   th:value="${order.trackingId}" placeholder="e.g. DTDC7781234567" required>
+                        </div>
+                        <button class="btn btn-primary w-100" type="submit">
+                            Move to <span th:text="${order.nextStatus.label}">next</span>
+                        </button>
+                    </form>
+                    <p class="form-text mb-0 mt-2">Status can only move forward, one step at a time.</p>
+                </div>
+            </div>
+
+            <div class="card mb-4" th:if="${order.shipped}">
+                <div class="card-header">Share with customer</div>
+                <div class="card-body">
+                    <textarea id="trackingMessage" class="form-control mb-2" rows="7"
+                              th:text="${order.trackingMessage}" readonly></textarea>
+                    <a class="btn btn-success w-100 mb-2"
+                       th:href="'https://wa.me/91' + ${order.customerMobileNumber} + '?text=' + ${#uris.escapeQueryParam(order.trackingMessage)}"
+                       target="_blank" rel="noopener">
+                        <i class="bi bi-whatsapp"></i> Send on WhatsApp
+                    </a>
+                    <button class="btn btn-outline-secondary w-100" type="button" onclick="copyTrackingMessage()">
+                        <i class="bi bi-clipboard"></i> Copy tracking message
+                    </button>
+                    <div id="copyFeedback" class="form-text text-success d-none">Copied to clipboard!</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">Edit details</div>
+                <div class="card-body">
+                    <form method="post" th:action="@{'/orders/' + ${order.id} + '/details'}"
+                          th:object="${orderEditForm}" novalidate>
+                        <input type="hidden" th:field="*{id}">
+                        <div class="mb-3">
+                            <label class="form-label" for="trackingId">Tracking id</label>
+                            <input id="trackingId" type="text" class="form-control" th:field="*{trackingId}"
+                                   th:classappend="${#fields.hasErrors('trackingId')} ? 'is-invalid'">
+                            <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('trackingId')}"
+                                 th:errors="*{trackingId}">error
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="customizationNotes">Customization notes</label>
+                            <textarea id="customizationNotes" rows="5" class="form-control"
+                                      th:field="*{customizationNotes}"
+                                      th:classappend="${#fields.hasErrors('customizationNotes')} ? 'is-invalid'"></textarea>
+                            <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('customizationNotes')}"
+                                 th:errors="*{customizationNotes}">error
+                            </div>
+                        </div>
+                        <button class="btn btn-primary w-100" type="submit">Save details</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+<script>
+    function copyTrackingMessage() {
+        const textarea = document.getElementById('trackingMessage');
+        const feedback = document.getElementById('copyFeedback');
+        const text = textarea.value;
+        const done = function () {
+            feedback.classList.remove('d-none');
+            setTimeout(() => feedback.classList.add('d-none'), 2500);
+        };
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(text).then(done);
+        } else {
+            textarea.removeAttribute('readonly');
+            textarea.select();
+            document.execCommand('copy');
+            textarea.setAttribute('readonly', 'readonly');
+            window.getSelection().removeAllRanges();
+            done();
+        }
+    }
+</script>
+</body>
+</html>
+
