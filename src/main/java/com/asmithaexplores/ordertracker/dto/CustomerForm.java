@@ -28,5 +28,9 @@ public class CustomerForm {
     @Pattern(regexp = "^[6-9]\\d{9}$",
             message = "Enter a valid 10-digit Indian mobile number (starting with 6, 7, 8 or 9)")
     private String mobileNumber;
+
+    @Pattern(regexp = "^$|^[6-9]\\d{9}$",
+            message = "Enter a valid 10-digit Indian mobile number (starting with 6, 7, 8 or 9)")
+    private String alternateMobileNumber;
 }
 

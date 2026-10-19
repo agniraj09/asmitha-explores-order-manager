@@ -34,5 +34,9 @@ public class Customer {
 
     @Column(name = "mobile_number", nullable = false, unique = true, length = 10)
     private String mobileNumber;
+
+    /** Optional secondary contact number - not unique. */
+    @Column(name = "alternate_mobile_number", length = 10)
+    private String alternateMobileNumber;
 }
 

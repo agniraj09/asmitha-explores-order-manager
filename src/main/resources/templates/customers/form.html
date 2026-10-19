@@ -39,6 +39,19 @@
                         </div>
 
                         <div class="mb-3">
+                            <label class="form-label" for="alternateMobileNumber">Alternate mobile number
+                                <span class="text-muted">(optional)</span></label>
+                            <input id="alternateMobileNumber" type="tel" inputmode="numeric" maxlength="10"
+                                   pattern="[0-9]{10}" autocomplete="tel-national" enterkeyhint="next"
+                                   class="form-control" th:field="*{alternateMobileNumber}"
+                                   th:classappend="${#fields.hasErrors('alternateMobileNumber')} ? 'is-invalid'">
+                            <div class="form-text">Optional. 10 digits, e.g. 9840012345</div>
+                            <div class="invalid-feedback" th:if="${#fields.hasErrors('alternateMobileNumber')}"
+                                 th:errors="*{alternateMobileNumber}">error
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
                             <label class="form-label" for="address">Address</label>
                             <textarea id="address" rows="4" class="form-control" th:field="*{address}"
                                       autocomplete="street-address" autocapitalize="sentences"

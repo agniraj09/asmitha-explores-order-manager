@@ -20,6 +20,7 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
             select c from Customer c
             where lower(c.name) like lower(concat('%', :term, '%'))
                or c.mobileNumber like concat('%', :term, '%')
+               or c.alternateMobileNumber like concat('%', :term, '%')
             order by c.name asc
             """)
     List<Customer> search(@Param("term") String term);

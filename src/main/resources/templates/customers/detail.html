@@ -15,6 +15,12 @@
                     <p class="mb-1"><i class="bi bi-telephone"></i>
                         <a th:href="'tel:+91' + ${customer.mobileNumber}" th:text="${customer.mobileNumber}">mobile</a>
                     </p>
+                    <p class="mb-1" th:if="${!#strings.isEmpty(customer.alternateMobileNumber)}">
+                        <i class="bi bi-telephone"></i>
+                        <a th:href="'tel:+91' + ${customer.alternateMobileNumber}"
+                           th:text="${customer.alternateMobileNumber}">alternate mobile</a>
+                        <span class="text-muted small">(alternate)</span>
+                    </p>
                     <p class="text-muted wrap-notes mb-3" th:text="${customer.address}">Address</p>
                     <p class="mb-3">Total orders:
                         <span class="badge text-bg-secondary" th:text="${customer.numberOfOrders}">0</span>

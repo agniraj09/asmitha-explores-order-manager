@@ -43,7 +43,12 @@
                     <td class="cell-title" data-label="Name"><a th:href="@{'/customers/' + ${c.id}}"
                                                                 th:text="${c.name}">Name</a></td>
                     <td data-label="Mobile"><a th:href="'tel:+91' + ${c.mobileNumber}"
-                                               th:text="${c.mobileNumber}">9999999999</a></td>
+                                               th:text="${c.mobileNumber}">9999999999</a>
+                        <div class="small text-muted" th:if="${!#strings.isEmpty(c.alternateMobileNumber)}">
+                            Alt: <a th:href="'tel:+91' + ${c.alternateMobileNumber}"
+                                    th:text="${c.alternateMobileNumber}">9999999999</a>
+                        </div>
+                    </td>
                     <td class="small text-muted wrap-notes" data-label="Address" th:text="${c.address}">Address</td>
                     <td class="text-center" data-label="Orders">
                         <span class="badge text-bg-secondary" th:text="${c.numberOfOrders}">0</span>

@@ -56,6 +56,7 @@ public class CustomerService {
                 .name(customer.getName())
                 .address(customer.getAddress())
                 .mobileNumber(customer.getMobileNumber())
+                .alternateMobileNumber(customer.getAlternateMobileNumber())
                 .build();
     }
 
@@ -72,6 +73,7 @@ public class CustomerService {
         customer.setName(form.getName().trim());
         customer.setAddress(form.getAddress().trim());
         customer.setMobileNumber(mobile);
+        customer.setAlternateMobileNumber(normalizeOptionalMobile(form.getAlternateMobileNumber()));
         return customerRepository.save(customer);
     }
 
@@ -93,6 +95,14 @@ public class CustomerService {
         return customerRepository.count();
     }
 
+    private String normalizeOptionalMobile(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
     private Map<Long, Long> orderCountsByCustomer() {
         Map<Long, Long> counts = new HashMap<>();
         for (Object[] row : orderRepository.countGroupedByCustomer()) {
@@ -107,6 +117,7 @@ public class CustomerService {
                 .name(customer.getName())
                 .address(customer.getAddress())
                 .mobileNumber(customer.getMobileNumber())
+                .alternateMobileNumber(customer.getAlternateMobileNumber())
                 .numberOfOrders(numberOfOrders)
                 .build();
     }
