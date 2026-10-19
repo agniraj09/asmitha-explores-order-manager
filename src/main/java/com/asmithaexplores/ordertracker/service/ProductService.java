@@ -66,8 +66,9 @@ public class ProductService {
     }
 
     /**
-     * Dashboard list: products blocking open orders or already booked to be printed.
-     * Products nobody ordered are not included - see the Inventory screen for those.
+     * Dashboard list: products whose open orders cannot be covered by the stock in hand.
+     * Everything else - including products with a booked "to be ordered" quantity that stock
+     * already covers - is not included; see the Inventory screen for those.
      */
     public List<RestockView> findNeedingRestock() {
         Map<Long, Integer> openUnits = new HashMap<>();

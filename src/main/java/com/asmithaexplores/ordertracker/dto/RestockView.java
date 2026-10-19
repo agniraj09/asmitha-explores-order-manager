@@ -6,8 +6,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * A product that needs attention on the dashboard: either a shortfall has already been
- * booked, or stock is low/out while open (not delivered) orders still need it.
+ * A product that needs attention on the dashboard: stock in hand cannot cover the
+ * open (not delivered) orders that still need it.
  */
 @Data
 @Builder
