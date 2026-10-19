@@ -1,0 +1,20 @@
+# Secrets - must never reach the image
+.env
+.env.local
+
+# Build output (the image builds its own)
+target/
+
+# Git & IDE
+.git/
+.gitignore
+.gitattributes
+.idea/
+*.iml
+.vscode/
+
+# Docs / local-only tooling
+README.md
+docker-compose.yml
+scripts/
+
