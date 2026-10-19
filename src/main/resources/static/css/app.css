@@ -156,11 +156,8 @@ a:hover { color: var(--brand); }
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .35);
 }
 
-.app-header .navbar-toggler {
-    border: 1px solid rgba(255, 255, 255, .45);
-    border-radius: var(--r-sm);
-}
-.app-header .navbar-toggler:focus { box-shadow: 0 0 0 .2rem rgba(255, 255, 255, .25); }
+/* The hamburger is never used: phones get the bottom tab bar, desktop is expanded */
+.app-header .navbar-toggler { display: none !important; }
 
 .btn-brand-cta {
     background: rgba(255, 255, 255, .95);
