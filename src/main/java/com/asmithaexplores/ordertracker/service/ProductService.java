@@ -106,15 +106,53 @@ public class ProductService {
                 .build();
     }
 
+    /**
+     * Creates or updates a product. Raising {@code quantityInHand} by hand means the owner has
+     * physically printed units, so the backlog is settled first - see
+     * {@link #absorbStockIncreaseIntoBacklog}.
+     */
     @Transactional
     public Product save(ProductForm form) {
-        Product product = form.getId() == null ? new Product() : getEntity(form.getId());
+        boolean creating = form.getId() == null;
+        Product product = creating ? new Product() : getEntity(form.getId());
+
+        int previousInHand = creating ? 0 : product.getQuantityInHand();
+        int previousToBeOrdered = creating ? 0 : product.getQuantityToBeOrdered();
+
         product.setName(form.getName().trim());
         product.setCategory(form.getCategory() == null ? null : form.getCategory().trim());
         product.setPrice(form.getPrice());
         product.setQuantityInHand(form.getQuantityInHand());
         product.setQuantityToBeOrdered(form.getQuantityToBeOrdered());
+
+        if (!creating) {
+            absorbStockIncreaseIntoBacklog(product, previousInHand, previousToBeOrdered);
+        }
         return productRepository.save(product);
+    }
+
+    /**
+     * Keeps the "to print" backlog honest when stock is topped up from the product form.
+     * <p>
+     * Stock is deducted when an order is placed, so {@code quantityToBeOrdered} is a journal of
+     * units that were promised but never came out of stock. Writing a higher {@code quantityInHand}
+     * means those units have now been printed, which is exactly what {@link #markOrdered} records -
+     * the backlog is therefore reduced by the units just added, so the product stops asking to be
+     * printed again. The stock figure itself is left untouched: the owed units are physically in
+     * hand and only leave when the order is delivered.
+     * <p>
+     * Skipped when the owner edited the backlog field in the same submit, because the typed value
+     * is then a deliberate correction and must win.
+     */
+    private void absorbStockIncreaseIntoBacklog(Product product, int previousInHand, int previousToBeOrdered) {
+        if (previousToBeOrdered <= 0 || product.getQuantityToBeOrdered() != previousToBeOrdered) {
+            return;
+        }
+        int unitsAdded = product.getQuantityInHand() - previousInHand;
+        if (unitsAdded <= 0) {
+            return;
+        }
+        product.setQuantityToBeOrdered(previousToBeOrdered - Math.min(unitsAdded, previousToBeOrdered));
     }
 
     @Transactional

@@ -57,6 +57,10 @@
                                 <div class="invalid-feedback" th:if="${#fields.hasErrors('quantityInHand')}"
                                      th:errors="*{quantityInHand}">error
                                 </div>
+                                <div class="form-text" th:if="${editing}">
+                                    Increasing this settles the same number of units from
+                                    &quot;to be ordered&quot;, unless you change that field too.
+                                </div>
                             </div>
                             <div class="col-6">
                                 <label class="form-label" for="quantityToBeOrdered">Quantity to be ordered</label>

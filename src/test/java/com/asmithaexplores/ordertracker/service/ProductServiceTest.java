@@ -1,5 +1,6 @@
 package com.asmithaexplores.ordertracker.service;
 
+import com.asmithaexplores.ordertracker.dto.ProductForm;
 import com.asmithaexplores.ordertracker.dto.RestockResult;
 import com.asmithaexplores.ordertracker.dto.RestockView;
 import com.asmithaexplores.ordertracker.entity.Product;
@@ -20,6 +21,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -84,5 +86,85 @@ class ProductServiceTest {
         assertThatThrownBy(() -> productService.markOrdered(10L))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessageContaining("Nothing to order");
+    }
+
+    @Test
+    @DisplayName("Topping up stock from the product form settles the booked shortfall")
+    void savingHigherStockAbsorbsTheBacklog() {
+        flashCards.setQuantityInHand(0);
+        flashCards.setQuantityToBeOrdered(3);
+        when(productRepository.findById(10L)).thenReturn(Optional.of(flashCards));
+        when(productRepository.save(flashCards)).thenReturn(flashCards);
+
+        productService.save(formFor(9, 3));
+
+        assertThat(flashCards.getQuantityInHand()).isEqualTo(9);
+        assertThat(flashCards.getQuantityToBeOrdered()).isZero();
+    }
+
+    @Test
+    @DisplayName("A stock top-up smaller than the shortfall only settles what was printed")
+    void savingHigherStockAbsorbsOnlyTheUnitsAdded() {
+        flashCards.setQuantityInHand(1);
+        flashCards.setQuantityToBeOrdered(6);
+        when(productRepository.findById(10L)).thenReturn(Optional.of(flashCards));
+        when(productRepository.save(flashCards)).thenReturn(flashCards);
+
+        productService.save(formFor(3, 6));
+
+        assertThat(flashCards.getQuantityInHand()).isEqualTo(3);
+        assertThat(flashCards.getQuantityToBeOrdered()).isEqualTo(4);
+    }
+
+    @Test
+    @DisplayName("An explicitly edited to-be-ordered value wins over the stock top-up")
+    void savingKeepsAnExplicitlyEditedBacklog() {
+        flashCards.setQuantityInHand(0);
+        flashCards.setQuantityToBeOrdered(3);
+        when(productRepository.findById(10L)).thenReturn(Optional.of(flashCards));
+        when(productRepository.save(flashCards)).thenReturn(flashCards);
+
+        productService.save(formFor(9, 5));
+
+        assertThat(flashCards.getQuantityInHand()).isEqualTo(9);
+        assertThat(flashCards.getQuantityToBeOrdered()).isEqualTo(5);
+    }
+
+    @Test
+    @DisplayName("Lowering stock leaves the booked shortfall alone")
+    void savingLowerStockKeepsTheBacklog() {
+        flashCards.setQuantityInHand(4);
+        flashCards.setQuantityToBeOrdered(3);
+        when(productRepository.findById(10L)).thenReturn(Optional.of(flashCards));
+        when(productRepository.save(flashCards)).thenReturn(flashCards);
+
+        productService.save(formFor(1, 3));
+
+        assertThat(flashCards.getQuantityInHand()).isEqualTo(1);
+        assertThat(flashCards.getQuantityToBeOrdered()).isEqualTo(3);
+    }
+
+    @Test
+    @DisplayName("A brand new product keeps the quantities exactly as typed")
+    void savingANewProductKeepsBothQuantities() {
+        when(productRepository.save(any(Product.class))).thenAnswer(call -> call.getArgument(0));
+
+        ProductForm form = formFor(9, 3);
+        form.setId(null);
+        Product saved = productService.save(form);
+
+        assertThat(saved.getQuantityInHand()).isEqualTo(9);
+        assertThat(saved.getQuantityToBeOrdered()).isEqualTo(3);
+    }
+
+    private ProductForm formFor(int quantityInHand, int quantityToBeOrdered) {
+        return ProductForm.builder()
+                .id(10L)
+                .name("Tamil 247 Letters Flash Cards")
+                .category("Flash Cards")
+                .price(new BigDecimal("349.00"))
+                .quantityInHand(quantityInHand)
+                .quantityToBeOrdered(quantityToBeOrdered)
+                .build();
     }
 }
