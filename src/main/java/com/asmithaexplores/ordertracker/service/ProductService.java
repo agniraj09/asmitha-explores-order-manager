@@ -66,9 +66,9 @@ public class ProductService {
     }
 
     /**
-     * Dashboard list: products whose open orders cannot be covered by the stock in hand.
-     * Everything else - including products with a booked "to be ordered" quantity that stock
-     * already covers - is not included; see the Inventory screen for those.
+     * Dashboard list: products that still owe units to open orders, i.e. a shortfall was booked
+     * because stock could not cover an order. See
+     * {@link com.asmithaexplores.ordertracker.repository.ProductRepository#findNeedingRestock()}.
      */
     public List<RestockView> findNeedingRestock() {
         Map<Long, Integer> openUnits = new HashMap<>();
@@ -128,9 +128,10 @@ public class ProductService {
     }
 
     /**
-     * "Ordered" action on the dashboard: the owner has printed / ordered the units that the
-     * open orders need, so they are moved into stock and the pending "to be ordered" amount
-     * is cleared by the same quantity.
+     * "Ordered" action on the dashboard: the owner has printed / ordered the units that were
+     * booked as missing, so those units are now physically in hand and the backlog is cleared.
+     * They are deducted again when the order they belong to reaches
+     * {@link com.asmithaexplores.ordertracker.entity.OrderStatus#DELIVERED}.
      *
      * @return the product name and how many units were added
      */
@@ -138,9 +139,7 @@ public class ProductService {
     public RestockResult markOrdered(Long productId) {
         Product product = getEntity(productId);
 
-        int unitsInOpenOrders = orderItemRepository.sumUnitsInOpenOrdersForProduct(productId);
-        int shortfall = Math.max(0, unitsInOpenOrders - product.getQuantityInHand());
-        int required = Math.max(shortfall, product.getQuantityToBeOrdered());
+        int required = Math.max(0, product.getQuantityToBeOrdered());
 
         if (required <= 0) {
             throw new BusinessRuleException(
@@ -148,7 +147,7 @@ public class ProductService {
         }
 
         product.setQuantityInHand(product.getQuantityInHand() + required);
-        product.setQuantityToBeOrdered(Math.max(0, product.getQuantityToBeOrdered() - required));
+        product.setQuantityToBeOrdered(0);
         productRepository.save(product);
 
         return new RestockResult(product.getName(), required,

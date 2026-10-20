@@ -6,8 +6,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * A product that needs attention on the dashboard: stock in hand cannot cover the
- * open (not delivered) orders that still need it.
+ * A product that needs attention on the dashboard: a shortfall was booked because stock
+ * could not cover an order that is not delivered yet.
  */
 @Data
 @Builder
@@ -21,22 +21,18 @@ public class RestockView {
     private int quantityInHand;
     private int quantityToBeOrdered;
 
-    /** Units committed to orders that are not delivered yet. */
+    /** Units committed to orders that are not delivered yet - shown for context only. */
     private int unitsInOpenOrders;
 
     private boolean outOfStock;
 
-    /** How many units are still missing to satisfy every open order. */
-    public int getShortfall() {
-        return Math.max(0, unitsInOpenOrders - quantityInHand);
-    }
-
     /**
-     * Units to print/order now: whatever was already booked as "to be ordered",
-     * or the gap between the open orders and the stock in hand - whichever is bigger.
+     * Units to print/order now. This is the booked shortfall: the units that were never taken
+     * out of stock because there were none left. Open-order quantities cannot be used here -
+     * whatever stock could cover was already deducted when the order was placed.
      */
     public int getRequiredQuantity() {
-        return Math.max(getShortfall(), quantityToBeOrdered);
+        return Math.max(0, quantityToBeOrdered);
     }
 
     /** Stock cannot cover the open orders - the owner has to print/order more. */

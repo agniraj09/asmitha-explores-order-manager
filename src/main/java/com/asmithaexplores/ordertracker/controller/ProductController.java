@@ -81,8 +81,9 @@ public class ProductController {
     }
 
     /**
-     * Dashboard "Ordered" button: the units needed by the open orders have been
-     * printed/ordered, so they go into stock and the pending amount is cleared.
+     * Dashboard "Ordered" button: the units owed to the open orders have been printed/ordered,
+     * so they go into stock and the pending amount is cleared. They leave stock again when the
+     * order is marked as delivered.
      */
     @PostMapping("/{id}/ordered")
     public String markOrdered(@PathVariable Long id,

@@ -290,7 +290,30 @@ public class OrderService {
         }
 
         order.setOrderStatus(targetStatus);
+        if (targetStatus == OrderStatus.DELIVERED) {
+            releaseShortfallStock(order);
+        }
         return toView(orderRepository.save(order));
+    }
+
+    /**
+     * The shortfall units of an order were never deducted from stock - there was none left when
+     * the order was placed. They are printed later via the dashboard "Ordered" button, which puts
+     * them into stock. Once the order is delivered those units physically leave, so they are
+     * deducted here and the booked shortfall is cleared so it can never be deducted twice.
+     */
+    private void releaseShortfallStock(Order order) {
+        for (OrderItem item : order.getOrderItems()) {
+            int shortfall = Math.min(item.getShortfallQuantityOrZero(), item.getQuantity());
+            if (shortfall == 0) {
+                continue;
+            }
+            Product product = item.getProduct();
+            product.setQuantityInHand(Math.max(0, product.getQuantityInHand() - shortfall));
+            product.setQuantityToBeOrdered(Math.max(0, product.getQuantityToBeOrdered() - shortfall));
+            productRepository.save(product);
+            item.setShortfallQuantity(0);
+        }
     }
 
     /** Deletes an order and puts the ordered quantities back into stock. */

@@ -20,17 +20,15 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     List<Product> findOutOfStock();
 
     /**
-     * Products that actually need printing/ordering right now: the units committed to orders that
-     * are not delivered yet exceed the stock in hand. Everything else - including products with a
-     * manually booked "to be ordered" quantity that stock already covers - stays on the Inventory
-     * screen, so the dashboard reads as a to-do list.
+     * Products that still owe units to open orders: the shortfall booked when stock could not
+     * cover an order ({@code quantityToBeOrdered > 0}). This ledger is maintained by order
+     * creation/deletion and cleared by the dashboard "Ordered" action, so it is the single
+     * source of truth for what has to be printed. Comparing open-order quantities against stock
+     * in hand would double-count the units already deducted when the order was placed.
      */
     @Query("""
             select p from Product p
-            where (select coalesce(sum(i.quantity), 0) from OrderItem i
-                   where i.product = p
-                     and i.order.orderStatus <> com.asmithaexplores.ordertracker.entity.OrderStatus.DELIVERED)
-                  > p.quantityInHand
+            where p.quantityToBeOrdered > 0
             order by p.quantityToBeOrdered desc, p.quantityInHand asc, p.name asc
             """)
     List<Product> findNeedingRestock();

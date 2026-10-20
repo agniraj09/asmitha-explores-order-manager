@@ -352,6 +352,37 @@ class OrderServiceTest {
         return form;
     }
 
+    @Test
+    @DisplayName("Delivering an order removes the printed shortfall units from stock")
+    void deliveryDeductsShortfallUnits() {
+        Order order = existingOrder(OrderStatus.SHIPPED);
+        order.getOrderItems().get(0).setShortfallQuantity(2);
+        flashCards.setQuantityInHand(5);
+        flashCards.setQuantityToBeOrdered(2);
+        when(orderRepository.findById(100L)).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        orderService.updateStatus(100L, OrderStatus.DELIVERED, null);
+
+        assertThat(flashCards.getQuantityInHand()).isEqualTo(3);
+        assertThat(flashCards.getQuantityToBeOrdered()).isZero();
+        assertThat(order.getOrderItems().get(0).getShortfallQuantityOrZero()).isZero();
+    }
+
+    @Test
+    @DisplayName("Delivering an order that had no shortfall leaves stock untouched")
+    void deliveryWithoutShortfallKeepsStock() {
+        Order order = existingOrder(OrderStatus.SHIPPED);
+        order.getOrderItems().get(0).setShortfallQuantity(0);
+        flashCards.setQuantityInHand(5);
+        when(orderRepository.findById(100L)).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        orderService.updateStatus(100L, OrderStatus.DELIVERED, null);
+
+        assertThat(flashCards.getQuantityInHand()).isEqualTo(5);
+    }
+
     private Order existingOrder(OrderStatus status) {
         Order order = Order.builder()
                 .id(100L)
