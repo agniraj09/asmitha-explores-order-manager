@@ -71,9 +71,9 @@ public class ProductService {
      * {@link com.asmithaexplores.ordertracker.repository.ProductRepository#findNeedingRestock()}.
      */
     public List<RestockView> findNeedingRestock() {
-        Map<Long, Integer> openUnits = new HashMap<>();
-        for (Object[] row : orderItemRepository.sumUnitsInOpenOrders()) {
-            openUnits.put((Long) row[0], ((Number) row[1]).intValue());
+        Map<Long, Integer> newOrderUnits = new HashMap<>();
+        for (Object[] row : orderItemRepository.sumUnitsInNewOrders()) {
+            newOrderUnits.put((Long) row[0], ((Number) row[1]).intValue());
         }
 
         return productRepository.findNeedingRestock().stream()
@@ -83,7 +83,7 @@ public class ProductService {
                         .category(product.getCategory())
                         .quantityInHand(product.getQuantityInHand())
                         .quantityToBeOrdered(product.getQuantityToBeOrdered())
-                        .unitsInOpenOrders(openUnits.getOrDefault(product.getId(), 0))
+                        .unitsInNewOrders(newOrderUnits.getOrDefault(product.getId(), 0))
                         .outOfStock(product.getQuantityInHand() <= 0)
                         .build())
                 .toList();

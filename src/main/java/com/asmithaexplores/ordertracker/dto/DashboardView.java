@@ -23,7 +23,7 @@ public class DashboardView {
     @Builder.Default
     private List<OrderView> pendingOrders = new ArrayList<>();
 
-    /** Products blocking open orders / already booked to be printed. */
+    /** Products with units still booked to be printed/ordered. */
     @Builder.Default
     private List<RestockView> restockProducts = new ArrayList<>();
 

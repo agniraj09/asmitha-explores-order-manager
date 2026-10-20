@@ -21,14 +21,14 @@ public class RestockView {
     private int quantityInHand;
     private int quantityToBeOrdered;
 
-    /** Units committed to orders that are not delivered yet - shown for context only. */
-    private int unitsInOpenOrders;
+    /** Units committed to orders that are still new - shown for context only. */
+    private int unitsInNewOrders;
 
     private boolean outOfStock;
 
     /**
      * Units to print/order now. This is the booked shortfall: the units that were never taken
-     * out of stock because there were none left. Open-order quantities cannot be used here -
+     * out of stock because there were none left. Order quantities cannot be used here -
      * whatever stock could cover was already deducted when the order was placed.
      */
     public int getRequiredQuantity() {

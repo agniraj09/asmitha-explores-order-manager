@@ -47,17 +47,17 @@ class ProductServiceTest {
     }
 
     @Test
-    @DisplayName("To print is the booked shortfall, not open orders minus stock in hand")
+    @DisplayName("To print is the booked shortfall, not order quantities minus stock in hand")
     void requiredQuantityIgnoresUnitsAlreadyDeductedFromStock() {
         flashCards.setQuantityInHand(0);
         when(productRepository.findNeedingRestock()).thenReturn(List.of(flashCards));
-        when(orderItemRepository.sumUnitsInOpenOrders())
+        when(orderItemRepository.sumUnitsInNewOrders())
                 .thenReturn(List.<Object[]>of(new Object[]{10L, 8}));
 
         List<RestockView> restock = productService.findNeedingRestock();
 
         assertThat(restock).hasSize(1);
-        assertThat(restock.get(0).getUnitsInOpenOrders()).isEqualTo(8);
+        assertThat(restock.get(0).getUnitsInNewOrders()).isEqualTo(8);
         assertThat(restock.get(0).getRequiredQuantity()).isEqualTo(6);
     }
 

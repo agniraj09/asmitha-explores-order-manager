@@ -84,7 +84,7 @@
                         <tr>
                             <th>Product</th>
                             <th class="text-center">In hand</th>
-                            <th class="text-center">Open orders</th>
+                            <th class="text-center">New orders</th>
                             <th class="text-center">To print</th>
                             <th class="text-end"></th>
                         </tr>
@@ -97,7 +97,7 @@
                                       th:attr="data-category=${p.category}" th:text="${p.category}">Category</span>
                             </td>
                             <td class="text-center" data-label="In hand" th:text="${p.quantityInHand}">0</td>
-                            <td class="text-center" data-label="Open orders" th:text="${p.unitsInOpenOrders}">0</td>
+                            <td class="text-center" data-label="New orders" th:text="${p.unitsInNewOrders}">0</td>
                             <td class="text-center" data-label="To print">
                                 <span class="fw-bold text-danger" th:if="${p.requiredQuantity > 0}"
                                       th:text="${p.requiredQuantity}">0</span>
