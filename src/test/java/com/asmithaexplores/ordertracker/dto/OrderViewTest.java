@@ -78,4 +78,15 @@ class OrderViewTest {
         assertThat(order.getWhatsAppNumber()).isEqualTo("919876543210");
         assertThat(OrderView.builder().build().getWhatsAppNumber()).isEmpty();
     }
+
+    @Test
+    @DisplayName("The message stays inside the basic multilingual plane so WhatsApp keeps it intact")
+    void trackingMessageUsesNoSurrogatePairs() {
+        String message = order.trackingMessage("https://franchexpress.com/courier-tracking/");
+
+        assertThat(message.codePoints().filter(Character::isSupplementaryCodePoint).count())
+                .describedAs("characters above U+FFFF reach the customer as a replacement character")
+                .isZero();
+        assertThat(message).endsWith("Thank you for shopping with us! \u263A\uFE0F");
+    }
 }

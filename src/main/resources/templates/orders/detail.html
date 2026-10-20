@@ -52,7 +52,7 @@
                             <i class="bi bi-telephone"></i> Call
                         </a>
                         <a class="btn btn-sm btn-success flex-fill flex-sm-grow-0"
-                           th:href="'https://wa.me/91' + ${order.customerMobileNumber}" target="_blank" rel="noopener">
+                           th:href="'whatsapp://send?phone=' + ${order.whatsAppNumber}">
                             <i class="bi bi-whatsapp"></i> WhatsApp
                         </a>
                     </div>
@@ -143,14 +143,18 @@
                                        data-whatsapp-number=${order.whatsAppNumber}"
                               readonly></textarea>
                     <a id="whatsAppLink" class="btn btn-success w-100 mb-2"
-                       th:href="'https://wa.me/' + ${order.whatsAppNumber}"
-                       target="_blank" rel="noopener">
+                       th:href="'whatsapp://send?phone=' + ${order.whatsAppNumber}">
                         <i class="bi bi-whatsapp"></i> Send on WhatsApp
                     </a>
                     <button class="btn btn-outline-secondary w-100" type="button" onclick="copyTrackingMessage()">
                         <i class="bi bi-clipboard"></i> Copy tracking message
                     </button>
                     <div id="copyFeedback" class="form-text text-success d-none">Copied to clipboard!</div>
+                    <div class="form-text mt-2">
+                        No WhatsApp app on this device?
+                        <a id="whatsAppWebLink" th:href="'https://web.whatsapp.com/send?phone=' + ${order.whatsAppNumber}"
+                           target="_blank" rel="noopener">Open WhatsApp Web</a>
+                    </div>
                 </div>
             </div>
 
@@ -211,6 +215,7 @@
         const textarea = document.getElementById('trackingMessage');
         const urlInput = document.getElementById('trackingUrl');
         const whatsAppLink = document.getElementById('whatsAppLink');
+        const whatsAppWebLink = document.getElementById('whatsAppWebLink');
         if (!textarea || !urlInput || !whatsAppLink) {
             return;
         }
@@ -230,7 +235,13 @@
         function refresh() {
             const message = buildMessage();
             textarea.value = message;
-            whatsAppLink.href = 'https://wa.me/' + number + '?text=' + encodeURIComponent(message);
+            const query = 'phone=' + number + '&text=' + encodeURIComponent(message);
+            // whatsapp:// opens the app straight away; wa.me would stop at its
+            // "Continue to chat" page first.
+            whatsAppLink.href = 'whatsapp://send?' + query;
+            if (whatsAppWebLink) {
+                whatsAppWebLink.href = 'https://web.whatsapp.com/send?' + query;
+            }
         }
 
         urlInput.addEventListener('input', refresh);

@@ -97,13 +97,19 @@ public class OrderView {
 
     /**
      * Ready-to-paste WhatsApp message for a shipped order.
+     * <p>
+     * Only characters from the basic multilingual plane are used. Emoji such as 👋 sit above it
+     * and are carried as a surrogate pair, which does not survive the hand-off to WhatsApp - the
+     * customer receives a replacement character. {@code \u263A} plus the variation selector
+     * {@code \uFE0F} renders as an emoji just the same and is encoded like the rupee sign, which
+     * does come through intact.
      *
      * @param trackingUrl courier tracking page to point the customer at; the line is left out
      *                    entirely when blank
      */
     public String trackingMessage(String trackingUrl) {
         StringBuilder message = new StringBuilder()
-                .append("Hi ").append(customerName).append(", \uD83D\uDC4B\n")
+                .append("Hi ").append(customerName).append(",\n")
                 .append("Your Asmitha Explores order #").append(id).append(" has been shipped.\n")
                 .append("Tracking ID: ").append(trackingId == null ? "" : trackingId).append('\n');
         if (trackingUrl != null && !trackingUrl.isBlank()) {
@@ -112,7 +118,7 @@ public class OrderView {
         return message
                 .append("Items: ").append(getItemsSummary()).append('\n')
                 .append("Total: \u20B9").append(totalAmount == null ? "0" : totalAmount.toPlainString()).append('\n')
-                .append("Thank you for shopping with us! \uD83D\uDE0A")
+                .append("Thank you for shopping with us! \u263A\uFE0F")
                 .toString();
     }
 
