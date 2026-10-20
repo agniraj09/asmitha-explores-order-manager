@@ -1,5 +1,6 @@
 package com.asmithaexplores.ordertracker.controller;
 
+import com.asmithaexplores.ordertracker.config.AppProperties;
 import com.asmithaexplores.ordertracker.dto.CustomerForm;
 import com.asmithaexplores.ordertracker.dto.OrderCreationResult;
 import com.asmithaexplores.ordertracker.dto.OrderEditForm;
@@ -40,10 +41,23 @@ public class OrderController {
     private final OrderService orderService;
     private final CustomerService customerService;
     private final ProductService productService;
+    private final AppProperties appProperties;
 
     @ModelAttribute("activeTab")
     public String activeTab() {
         return "orders";
+    }
+
+    /** Pre-fills the courier tracking link on the detail page; the owner can override it there. */
+    @ModelAttribute("trackingUrl")
+    public String trackingUrl() {
+        return appProperties.getTrackingUrl();
+    }
+
+    /** Token the browser replaces with the tracking link typed by the owner. */
+    @ModelAttribute("trackingUrlPlaceholder")
+    public String trackingUrlPlaceholder() {
+        return OrderView.TRACKING_URL_PLACEHOLDER;
     }
 
     @GetMapping

@@ -128,10 +128,22 @@
             <div class="card mb-4" th:if="${order.shipped}">
                 <div class="card-header">Share with customer</div>
                 <div class="card-body">
-                    <textarea id="trackingMessage" class="form-control mb-2" rows="7"
-                              th:text="${order.trackingMessage}" readonly></textarea>
-                    <a class="btn btn-success w-100 mb-2"
-                       th:href="'https://wa.me/91' + ${order.customerMobileNumber} + '?text=' + ${#uris.escapeQueryParam(order.trackingMessage)}"
+                    <div class="mb-2">
+                        <label class="form-label" for="trackingUrl">Courier tracking link</label>
+                        <input id="trackingUrl" type="url" class="form-control"
+                               th:value="${trackingUrl}" th:placeholder="${trackingUrl}">
+                        <div class="form-text">
+                            Change it for this order if the parcel went out with another courier.
+                            Clear it to leave the link out of the message.
+                        </div>
+                    </div>
+                    <textarea id="trackingMessage" class="form-control mb-2" rows="8"
+                              th:attr="data-template=${order.trackingMessageTemplate},
+                                       data-placeholder=${trackingUrlPlaceholder},
+                                       data-whatsapp-number=${order.whatsAppNumber}"
+                              readonly></textarea>
+                    <a id="whatsAppLink" class="btn btn-success w-100 mb-2"
+                       th:href="'https://wa.me/' + ${order.whatsAppNumber}"
                        target="_blank" rel="noopener">
                         <i class="bi bi-whatsapp"></i> Send on WhatsApp
                     </a>
@@ -194,6 +206,36 @@
             done();
         }
     }
+
+    (function () {
+        const textarea = document.getElementById('trackingMessage');
+        const urlInput = document.getElementById('trackingUrl');
+        const whatsAppLink = document.getElementById('whatsAppLink');
+        if (!textarea || !urlInput || !whatsAppLink) {
+            return;
+        }
+
+        const template = textarea.dataset.template || '';
+        const placeholder = textarea.dataset.placeholder || '';
+        const number = textarea.dataset.whatsappNumber || '';
+
+        function buildMessage() {
+            const url = urlInput.value.trim();
+            if (url) {
+                return template.split(placeholder).join(url);
+            }
+            return template.split('\n').filter(line => line.indexOf(placeholder) === -1).join('\n');
+        }
+
+        function refresh() {
+            const message = buildMessage();
+            textarea.value = message;
+            whatsAppLink.href = 'https://wa.me/' + number + '?text=' + encodeURIComponent(message);
+        }
+
+        urlInput.addEventListener('input', refresh);
+        refresh();
+    })();
 </script>
 </body>
 </html>

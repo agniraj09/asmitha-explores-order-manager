@@ -18,6 +18,9 @@ import java.util.List;
 @Builder
 public class OrderView {
 
+    /** Token standing in for the courier tracking url in {@link #getTrackingMessageTemplate()}. */
+    public static final String TRACKING_URL_PLACEHOLDER = "{{trackingUrl}}";
+
     private Long id;
     private Long customerId;
     private String customerName;
@@ -78,14 +81,44 @@ public class OrderView {
                 .orElse("-");
     }
 
-    /** Ready-to-paste WhatsApp message for a shipped order. */
+    /** Ready-to-paste WhatsApp message for a shipped order, without a courier tracking link. */
     public String getTrackingMessage() {
-        return "Hi " + customerName + ", \uD83D\uDC4B\n"
-                + "Your Asmitha Explores order #" + id + " has been shipped.\n"
-                + "Tracking ID: " + (trackingId == null ? "" : trackingId) + "\n"
-                + "Items: " + getItemsSummary() + "\n"
-                + "Total: \u20B9" + (totalAmount == null ? "0" : totalAmount.toPlainString()) + "\n"
-                + "Thank you for shopping with us! \uD83D\uDE0A";
+        return trackingMessage(null);
+    }
+
+    /**
+     * The same message with the courier link left as {@value #TRACKING_URL_PLACEHOLDER}, so the
+     * browser can swap in a tracking url typed by the owner without duplicating the wording here.
+     * Dropping the whole line removes the tracking link from the message.
+     */
+    public String getTrackingMessageTemplate() {
+        return trackingMessage(TRACKING_URL_PLACEHOLDER);
+    }
+
+    /**
+     * Ready-to-paste WhatsApp message for a shipped order.
+     *
+     * @param trackingUrl courier tracking page to point the customer at; the line is left out
+     *                    entirely when blank
+     */
+    public String trackingMessage(String trackingUrl) {
+        StringBuilder message = new StringBuilder()
+                .append("Hi ").append(customerName).append(", \uD83D\uDC4B\n")
+                .append("Your Asmitha Explores order #").append(id).append(" has been shipped.\n")
+                .append("Tracking ID: ").append(trackingId == null ? "" : trackingId).append('\n');
+        if (trackingUrl != null && !trackingUrl.isBlank()) {
+            message.append("Track here: ").append(trackingUrl.trim()).append('\n');
+        }
+        return message
+                .append("Items: ").append(getItemsSummary()).append('\n')
+                .append("Total: \u20B9").append(totalAmount == null ? "0" : totalAmount.toPlainString()).append('\n')
+                .append("Thank you for shopping with us! \uD83D\uDE0A")
+                .toString();
+    }
+
+    /** Number the tracking message is sent to, in the international format WhatsApp expects. */
+    public String getWhatsAppNumber() {
+        return customerMobileNumber == null ? "" : "91" + customerMobileNumber.trim();
     }
 }
 

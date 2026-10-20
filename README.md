@@ -18,7 +18,7 @@ Built with **Java 17 · Spring Boot 3 · Spring MVC · Spring Data JPA · Thymel
 | **Order editing** | While an order is still `NEW` you can change customer, date, products, quantities and notes — stock is reversed and re-applied automatically. After that only notes/tracking id can be edited |
 | **Stock handling** | Creating an order reduces `quantityInHand`; when stock is short the order is still accepted and the shortfall is added to `quantityToBeOrdered` with a warning |
 | **Status flow** | Forward-only: `NEW → PRINTING_IN_PROGRESS → PACKED → SHIPPED → DELIVERED`, tracking id mandatory for `SHIPPED` |
-| **WhatsApp** | "Copy tracking message" button on shipped/delivered orders creates a ready-to-paste message |
+| **WhatsApp** | Shipped/delivered orders get a "Send on WhatsApp" button that opens a chat with the customer carrying a templated message — tracking id, courier tracking link, items and total. The courier link defaults to `app.tracking-url` and can be overridden per order before sending |
 
 ---
 
@@ -192,6 +192,7 @@ The PostgreSQL driver is already on the classpath — no `pom.xml` change needed
 |----------|--------------|---------|---------|
 | `app.seed-data` | — | `true` (local) / `false` (prod) | Seed demo data when the database is empty |
 | `app.shop-name` | — | `Asmitha Explores` | Shop name used in messages |
+| `app.tracking-url` | `TRACKING_URL` | `https://franchexpress.com/courier-tracking/` | Courier tracking link pre-filled in the WhatsApp message; overridable per order in the UI |
 | `server.port` | `PORT` | `8080` | HTTP port |
 | `spring.profiles.active` | `SPRING_PROFILES_ACTIVE` | `local` | Active profile |
 | `spring.jpa.hibernate.ddl-auto` | `DB_DDL_AUTO` | `update` | Schema handling in `prod` |
