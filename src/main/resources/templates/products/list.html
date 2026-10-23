@@ -18,13 +18,24 @@
         <a class="btn btn-primary" th:href="@{/products/new}"><i class="bi bi-plus-lg"></i> Add product</a>
     </div>
 
-    <div class="card">
+    <div class="card" th:each="group : ${productsByCategory}"
+         th:classappend="${!groupStat.last} ? 'mb-3'">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>
+                <span class="badge category-pill" th:attr="data-category=${group.key}"
+                      th:text="${group.key}">Category</span>
+                <span class="text-muted small ms-1">
+                    <span th:text="${#lists.size(group.value)}">0</span> product(s)
+                </span>
+            </span>
+            <span class="badge text-bg-danger" th:if="${!#lists.isEmpty(group.value.?[outOfStock])}"
+                  th:text="|${#lists.size(group.value.?[outOfStock])} out of stock|">0 out of stock</span>
+        </div>
         <div class="table-responsive table-stack-wrap">
             <table class="table table-hover table-stack align-middle mb-0">
                 <thead>
                 <tr>
                     <th>Product</th>
-                    <th>Category</th>
                     <th class="text-end">Price</th>
                     <th class="text-center">In hand</th>
                     <th class="text-center">To be ordered</th>
@@ -32,14 +43,10 @@
                 </tr>
                 </thead>
                 <tbody>
-                <tr th:each="p : ${products}" th:classappend="${p.rowClass}">
+                <tr th:each="p : ${group.value}" th:classappend="${p.rowClass}">
                     <td class="cell-title" data-label="Product">
                         <span th:text="${p.name}">Product</span>
                         <span class="badge text-bg-danger ms-1" th:if="${p.outOfStock}">Out of stock</span>
-                    </td>
-                    <td data-label="Category">
-                        <span class="badge category-pill" th:attr="data-category=${p.category}"
-                              th:text="${p.category} ?: 'Other'">Category</span>
                     </td>
                     <td class="text-end money" data-label="Price">₹<span
                             th:text="${#numbers.formatDecimal(p.price, 1, 'COMMA', 2, 'POINT')}">0.00</span></td>
@@ -53,12 +60,13 @@
                         </form>
                     </td>
                 </tr>
-                <tr th:if="${#lists.isEmpty(products)}">
-                    <td colspan="6" class="text-center text-muted py-4 cell-empty">No products yet.</td>
-                </tr>
                 </tbody>
             </table>
         </div>
+    </div>
+
+    <div class="card" th:if="${#maps.isEmpty(productsByCategory)}">
+        <div class="card-body text-center text-muted py-4">No products yet.</div>
     </div>
 </div>
 

@@ -643,3 +643,56 @@ a:hover { color: var(--brand); }
 html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
 body { overflow-x: hidden; }
 
+
+/* ======================= ADDRESS LABELS ======================= */
+.label-picker { max-height: 340px; overflow-y: auto; }
+
+.label-sheet {
+    background: #fff;
+    border: 1px solid var(--bs-border-color, #d5d9e0);
+    border-radius: .75rem;
+    padding: 8mm;
+    overflow-x: auto;
+}
+
+table.labels { border-collapse: collapse; width: 100%; table-layout: fixed; }
+
+table.labels td {
+    border: 1px dashed #808080;
+    vertical-align: middle;
+    padding: 4mm 5mm;
+    position: relative;
+    font-family: Arial, "Nirmala UI", sans-serif;
+    color: #1d2330;
+}
+
+table.labels tr { page-break-inside: avoid; break-inside: avoid; }
+
+.label-name { font-weight: bold; margin-bottom: 2px; }
+.label-phone { font-weight: bold; margin-top: 4px; }
+
+.label-remove {
+    position: absolute;
+    top: 2px;
+    right: 4px;
+    border: 0;
+    background: transparent;
+    color: #b42318;
+    font-size: 1.1rem;
+    line-height: 1;
+    padding: 0 .25rem;
+    cursor: pointer;
+    opacity: .55;
+}
+
+.label-remove:hover { opacity: 1; }
+
+@page { size: A4; margin: 10mm; }
+
+@media print {
+    body { background: #fff; overflow: visible; }
+    .app-header, .mobile-tabbar, .app-footer, .tabbar-spacer, .no-print, .alert { display: none !important; }
+    .container { max-width: none; padding: 0 !important; }
+    .label-sheet { border: 0; border-radius: 0; padding: 0; overflow: visible; }
+    .row > [class*="col-"] { width: 100%; max-width: 100%; flex: 0 0 100%; }
+}

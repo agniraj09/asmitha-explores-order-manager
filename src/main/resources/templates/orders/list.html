@@ -9,8 +9,12 @@
 
     <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3 page-header">
         <h1 class="h3 page-title mb-0">Orders</h1>
-        <a class="btn btn-primary d-none d-lg-inline-flex" th:href="@{/orders/new}"><i class="bi bi-plus-lg"></i> New
-            order</a>
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-secondary" th:href="@{/labels/addresses}">
+                <i class="bi bi-tags"></i> Address labels</a>
+            <a class="btn btn-primary d-none d-lg-inline-flex" th:href="@{/orders/new}"><i class="bi bi-plus-lg"></i> New
+                order</a>
+        </div>
     </div>
 
     <form class="card card-body mb-3" method="get" th:action="@{/orders}" th:object="${filter}">

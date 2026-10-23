@@ -126,7 +126,7 @@
                 <div class="card-footer small text-muted">
                     Units that could not be covered by stock when the order was placed. Press
                     <strong>Ordered</strong> once you have printed them — they are added to stock, and
-                    leave it again when the order is marked delivered.
+                    leave it again when the order is marked packed.
                     <span th:if="${!#lists.isEmpty(dashboard.outOfStockProducts)}">
                         <span th:text="${#lists.size(dashboard.outOfStockProducts)}">0</span> product(s) are
                         currently out of stock — see <a th:href="@{/products}">Inventory</a>.

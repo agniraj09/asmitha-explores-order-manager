@@ -55,6 +55,10 @@
                         <a class="nav-link" th:classappend="${activeTab == 'products'} ? 'active'"
                            th:href="@{/products}"><i class="bi bi-box-seam me-1"></i>Inventory</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" th:classappend="${activeTab == 'labels'} ? 'active'"
+                           th:href="@{/labels/addresses}"><i class="bi bi-tags me-1"></i>Labels</a>
+                    </li>
                     <li class="nav-item ms-lg-2">
                         <a class="btn btn-brand-cta w-100" th:href="@{/orders/new}">
                             <i class="bi bi-plus-lg"></i> New order

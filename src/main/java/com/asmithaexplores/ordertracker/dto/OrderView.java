@@ -48,6 +48,21 @@ public class OrderView {
         return orderStatus == OrderStatus.NEW;
     }
 
+    /** Units of this order that still have to be printed before it can be packed. */
+    public int getUnitsToPrint() {
+        return items.stream().mapToInt(OrderItemView::getPendingPrintQuantity).sum();
+    }
+
+    /**
+     * The order cannot move to {@link OrderStatus#PACKED} yet: stock does not hold the units it
+     * owes. Pressing "Ordered" on the dashboard puts them in stock and clears this.
+     */
+    public boolean isWaitingForPrint() {
+        return orderStatus != null
+                && orderStatus.ordinal() < OrderStatus.PACKED.ordinal()
+                && getUnitsToPrint() > 0;
+    }
+
     public boolean isDelivered() {
         return orderStatus == OrderStatus.DELIVERED;
     }

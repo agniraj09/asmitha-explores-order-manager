@@ -139,7 +139,7 @@ public class ProductService {
      * means those units have now been printed, which is exactly what {@link #markOrdered} records -
      * the backlog is therefore reduced by the units just added, so the product stops asking to be
      * printed again. The stock figure itself is left untouched: the owed units are physically in
-     * hand and only leave when the order is delivered.
+     * hand and only leave when the order is packed.
      * <p>
      * Skipped when the owner edited the backlog field in the same submit, because the typed value
      * is then a deliberate correction and must win.
@@ -168,8 +168,9 @@ public class ProductService {
     /**
      * "Ordered" action on the dashboard: the owner has printed / ordered the units that were
      * booked as missing, so those units are now physically in hand and the backlog is cleared.
-     * They are deducted again when the order they belong to reaches
-     * {@link com.asmithaexplores.ordertracker.entity.OrderStatus#DELIVERED}.
+     * They are deducted again when the order they belong to is marked
+     * {@link com.asmithaexplores.ordertracker.entity.OrderStatus#PACKED} and the units leave
+     * the shelf.
      *
      * @return the product name and how many units were added
      */

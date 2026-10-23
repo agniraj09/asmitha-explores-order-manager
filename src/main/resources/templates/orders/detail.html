@@ -73,7 +73,12 @@
                         </thead>
                         <tbody>
                         <tr th:each="i : ${order.items}">
-                            <td class="cell-title" data-label="Product" th:text="${i.productName}">Product</td>
+                            <td class="cell-title" data-label="Product">
+                                <span th:text="${i.productName}">Product</span>
+                                <span class="badge text-bg-warning ms-1" th:if="${i.pendingPrintQuantity > 0}"
+                                      th:title="|${i.pendingPrintQuantity} unit(s) are not in stock yet - press &quot;Ordered&quot; on the dashboard once printed|"
+                                      th:text="|${i.pendingPrintQuantity} to print|">1 to print</span>
+                            </td>
                             <td class="text-center" data-label="Qty" th:text="${i.quantity}">1</td>
                             <td class="text-end" data-label="Unit price">₹<span
                                     th:text="${#numbers.formatDecimal(i.unitPrice,1,'COMMA',2,'POINT')}">0.00</span>
@@ -109,6 +114,23 @@
                         This order is delivered. Nothing more to do. 🎉
                     </div>
 
+                    <div class="alert alert-warning" th:if="${order.waitingForPrint}">
+                        <div class="fw-semibold mb-1">
+                            <i class="bi bi-printer"></i>
+                            <span th:text="${order.unitsToPrint}">1</span> unit(s) still to print
+                        </div>
+                        <ul class="mb-2 ps-3 small">
+                            <li th:each="i : ${order.items}" th:if="${i.pendingPrintQuantity > 0}"
+                                th:text="|${i.productName} - ${i.pendingPrintQuantity} of ${i.shortfallQuantity}|">
+                                Product - 1 of 1
+                            </li>
+                        </ul>
+                        <span class="small">
+                            Stock could not cover this order. Print them, press
+                            <a th:href="@{/}">Ordered</a> on the dashboard, then pack the order.
+                        </span>
+                    </div>
+
                     <form th:if="${order.nextStatus != null}" method="post"
                           th:action="@{'/orders/' + ${order.id} + '/status'}">
                         <input type="hidden" name="targetStatus" th:value="${order.nextStatus.name()}">
@@ -117,7 +139,8 @@
                             <input id="statusTrackingId" name="trackingId" type="text" class="form-control"
                                    th:value="${order.trackingId}" placeholder="e.g. DTDC7781234567" required>
                         </div>
-                        <button class="btn btn-primary w-100" type="submit">
+                        <button class="btn btn-primary w-100" type="submit"
+                                th:disabled="${order.waitingForPrint and order.nextStatus.name() == 'PACKED'}">
                             Move to <span th:text="${order.nextStatus.label}">next</span>
                         </button>
                     </form>

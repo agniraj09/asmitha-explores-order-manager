@@ -1,5 +1,6 @@
 package com.asmithaexplores.ordertracker.service;
 
+import com.asmithaexplores.ordertracker.dto.AddressLabelView;
 import com.asmithaexplores.ordertracker.dto.OrderCreationResult;
 import com.asmithaexplores.ordertracker.dto.OrderEditForm;
 import com.asmithaexplores.ordertracker.dto.OrderFilter;
@@ -26,7 +27,9 @@ import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -36,6 +39,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class OrderService {
+
+    private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("dd MMM yyyy");
 
     private final OrderRepository orderRepository;
     private final ProductRepository productRepository;
@@ -77,6 +82,60 @@ public class OrderService {
         return orderRepository.findByOrderStatusNotOrderByOrderDateAscIdAsc(OrderStatus.DELIVERED).stream()
                 .map(OrderService::toView)
                 .toList();
+    }
+
+    /**
+     * Shipping labels for every order that is still open (anything but delivered), oldest first.
+     * Orders that have not been packed yet - {@link OrderStatus#NEW} and
+     * {@link OrderStatus#PRINTING_IN_PROGRESS} - are the ones the labels are usually printed for,
+     * so only those are ticked on load; the rest can be added from the same page.
+     */
+    public List<AddressLabelView> findLabelCandidates() {
+        return orderRepository.findByOrderStatusNotOrderByOrderDateAscIdAsc(OrderStatus.DELIVERED).stream()
+                .map(OrderService::toLabel)
+                .toList();
+    }
+
+    private static AddressLabelView toLabel(Order order) {
+        Customer customer = order.getCustomer();
+        OrderStatus status = order.getOrderStatus();
+        return AddressLabelView.builder()
+                .orderId(order.getId())
+                .customerName(customer == null ? "-" : customer.getName())
+                .statusLabel(status == null ? "-" : status.getLabel())
+                .statusBadgeClass(status == null ? "secondary" : status.getBadgeClass())
+                .orderDateLabel(order.getOrderDate() == null ? "" : DATE_FORMAT.format(order.getOrderDate()))
+                .addressLines(addressLines(customer))
+                .phones(phones(customer))
+                .selectedByDefault(status == OrderStatus.NEW || status == OrderStatus.PRINTING_IN_PROGRESS)
+                .build();
+    }
+
+    private static List<String> addressLines(Customer customer) {
+        if (customer == null || customer.getAddress() == null) {
+            return new ArrayList<>();
+        }
+        return Arrays.stream(customer.getAddress().split("\\R"))
+                .map(String::trim)
+                .filter(line -> !line.isEmpty())
+                .collect(Collectors.toCollection(ArrayList::new));
+    }
+
+    /** Primary number first; the alternate one only when it is actually a different number. */
+    private static List<String> phones(Customer customer) {
+        List<String> phones = new ArrayList<>();
+        if (customer == null) {
+            return phones;
+        }
+        String primary = trimToNull(customer.getMobileNumber());
+        String alternate = trimToNull(customer.getAlternateMobileNumber());
+        if (primary != null) {
+            phones.add(primary);
+        }
+        if (alternate != null && !alternate.equals(primary)) {
+            phones.add(alternate);
+        }
+        return phones;
     }
 
     public Order getEntity(Long id) {
@@ -279,6 +338,9 @@ public class OrderService {
                     + " \u2192 " + (current.next() == null ? "nothing (final status)" : current.next().getLabel())
                     + ". Cannot change to " + targetStatus.getLabel() + ".");
         }
+        if (targetStatus == OrderStatus.PACKED) {
+            requirePrintedShortfallUnits(order);
+        }
         if (targetStatus == OrderStatus.SHIPPED) {
             String tracking = trimToNull(trackingId) != null ? trimToNull(trackingId) : order.getTrackingId();
             if (!StringUtils.hasText(tracking)) {
@@ -290,17 +352,46 @@ public class OrderService {
         }
 
         order.setOrderStatus(targetStatus);
-        if (targetStatus == OrderStatus.DELIVERED) {
+        // Packing is when the goods physically leave the shelf. Later statuses are covered too so
+        // orders that were already past packing before this rule existed still settle their units.
+        if (targetStatus.ordinal() >= OrderStatus.PACKED.ordinal()) {
             releaseShortfallStock(order);
         }
         return toView(orderRepository.save(order));
     }
 
     /**
+     * Packing takes the units off the shelf, so everything the order still owes must physically
+     * exist first. An item only owes units when a shortfall was booked at order time; those are
+     * put into stock by the dashboard "Ordered" button. When that stock is not there the order
+     * cannot be packed, which keeps the inventory figures honest.
+     */
+    private void requirePrintedShortfallUnits(Order order) {
+        List<String> missing = new ArrayList<>();
+        for (OrderItem item : order.getOrderItems()) {
+            int shortfall = Math.min(item.getShortfallQuantityOrZero(), item.getQuantity());
+            if (shortfall == 0) {
+                continue;
+            }
+            Product product = item.getProduct();
+            int available = Math.max(0, product.getQuantityInHand());
+            if (available < shortfall) {
+                missing.add(product.getName() + " (" + (shortfall - available) + " of " + shortfall + ")");
+            }
+        }
+        if (!missing.isEmpty()) {
+            throw new BusinessRuleException("Cannot pack order #" + order.getId()
+                    + " - these units are still to be printed: " + String.join(", ", missing)
+                    + ". Press \"Ordered\" on the dashboard once they are printed, then pack the order.");
+        }
+    }
+
+    /**
      * The shortfall units of an order were never deducted from stock - there was none left when
      * the order was placed. They are printed later via the dashboard "Ordered" button, which puts
-     * them into stock. Once the order is delivered those units physically leave, so they are
-     * deducted here and the booked shortfall is cleared so it can never be deducted twice.
+     * them into stock. Packing the order takes those units off the shelf, so they are deducted
+     * here and the booked shortfall is cleared, which also makes this safe to call again on every
+     * later status change.
      */
     private void releaseShortfallStock(Order order) {
         for (OrderItem item : order.getOrderItems()) {
@@ -342,13 +433,19 @@ public class OrderService {
 
     public static OrderView toView(Order order) {
         List<OrderItemView> items = order.getOrderItems().stream()
-                .map(i -> OrderItemView.builder()
-                        .productId(i.getProduct().getId())
-                        .productName(i.getProduct().getName())
-                        .quantity(i.getQuantity())
-                        .unitPrice(i.getUnitPrice())
-                        .lineTotal(i.getLineTotal())
-                        .build())
+                .map(i -> {
+                    int shortfall = Math.min(i.getShortfallQuantityOrZero(), i.getQuantity());
+                    int inHand = Math.max(0, i.getProduct().getQuantityInHand());
+                    return OrderItemView.builder()
+                            .productId(i.getProduct().getId())
+                            .productName(i.getProduct().getName())
+                            .quantity(i.getQuantity())
+                            .unitPrice(i.getUnitPrice())
+                            .lineTotal(i.getLineTotal())
+                            .shortfallQuantity(shortfall)
+                            .pendingPrintQuantity(Math.max(0, shortfall - inHand))
+                            .build();
+                })
                 .toList();
 
         Customer customer = order.getCustomer();

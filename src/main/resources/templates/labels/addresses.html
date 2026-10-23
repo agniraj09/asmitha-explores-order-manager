@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Address labels')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar(${activeTab})}"></nav>
+
+<div class="container pb-5">
+    <div th:replace="~{fragments/layout :: alerts}"></div>
+
+    <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3 page-header no-print">
+        <h1 class="h3 page-title mb-0">Address labels</h1>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-secondary" id="wordBtn">
+                <i class="bi bi-file-earmark-word"></i> Word (.doc)
+            </button>
+            <button type="button" class="btn btn-primary" id="printBtn">
+                <i class="bi bi-printer"></i> Print
+            </button>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <!-- ------------------------------------------------- picker + options -->
+        <div class="col-12 col-lg-5 no-print">
+            <div class="card card-body mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h2 class="h6 mb-0">Open orders</h2>
+                    <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-outline-secondary" id="selectAll">All</button>
+                        <button type="button" class="btn btn-outline-secondary" id="selectNone">None</button>
+                    </div>
+                </div>
+                <p class="text-muted small mb-2">
+                    New and printing orders are ticked for you. Tick any other open order to add its label.
+                </p>
+
+                <div class="label-picker" id="orderPicker">
+                    <div class="form-check d-flex align-items-start gap-2 py-1" th:each="l : ${labels}">
+                        <input class="form-check-input mt-1 order-check" type="checkbox"
+                               th:id="'order-' + ${l.orderId}"
+                               th:value="${l.orderId}"
+                               th:checked="${l.selectedByDefault}">
+                        <label class="form-check-label flex-grow-1" th:for="'order-' + ${l.orderId}">
+                            <span class="fw-semibold" th:text="${l.customerName}">Customer</span>
+                            <span class="text-muted small">· #<span th:text="${l.orderId}">1</span></span>
+                            <span class="badge ms-1" th:classappend="'text-bg-' + ${l.statusBadgeClass}"
+                                  th:text="${l.statusLabel}">Status</span>
+                            <span class="d-block text-muted small" th:text="${l.orderDateLabel}">date</span>
+                        </label>
+                    </div>
+                    <p class="text-muted small mb-0" th:if="${#lists.isEmpty(labels)}">
+                        No open orders right now.
+                    </p>
+                </div>
+            </div>
+
+            <div class="card card-body mb-3">
+                <h2 class="h6 mb-1">Add addresses manually</h2>
+                <p class="text-muted small mb-2">
+                    Paste from Excel or WhatsApp. Each address must start with a line beginning
+                    <b>To:</b>. Phone numbers are detected automatically.
+                </p>
+                <textarea class="form-control font-monospace" id="pasteBox" rows="6"
+                          placeholder="To: Name&#10;Address line 1&#10;Address line 2&#10;Chennai 600001&#10;9999999999"></textarea>
+                <div class="d-flex gap-2 mt-2">
+                    <button type="button" class="btn btn-outline-primary btn-sm" id="addPasted">
+                        <i class="bi bi-plus-lg"></i> Add to labels
+                    </button>
+                    <span class="text-danger small align-self-center" id="pasteError"></span>
+                </div>
+                <div class="mt-2" id="customList"></div>
+            </div>
+
+            <div class="card card-body">
+                <h2 class="h6 mb-2">Layout</h2>
+                <div class="row g-2">
+                    <div class="col-4">
+                        <label class="form-label small" for="cols">Per row</label>
+                        <select class="form-select" id="cols">
+                            <option>1</option>
+                            <option selected>2</option>
+                            <option>3</option>
+                        </select>
+                    </div>
+                    <div class="col-4">
+                        <label class="form-label small" for="fontSize">Font (pt)</label>
+                        <input type="number" class="form-control" id="fontSize" value="12" min="8" max="20">
+                    </div>
+                    <div class="col-4">
+                        <label class="form-label small" for="minHeight">Height (mm)</label>
+                        <input type="number" class="form-control" id="minHeight" value="60" min="30" max="140">
+                    </div>
+                </div>
+                <div class="text-muted small mt-2" id="labelCount"></div>
+            </div>
+        </div>
+
+        <!-- ------------------------------------------------------------ sheet -->
+        <div class="col-12 col-lg-7">
+            <div class="label-sheet" id="sheet"></div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+
+<script th:inline="javascript">
+/*<![CDATA[*/
+(function () {
+    const ORDERS = /*[[${labels}]]*/ [];
+
+    const $ = id => document.getElementById(id);
+    const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const PHONE_RE = /^(?:(?:ph|phone|cell|mob|mobile|tel|contact)\.?\s*(?:no\.?)?\s*[:\-]?\s*)?\+?[\d\s\-()]{8,}$/i;
+    const PHONE_PREFIX_RE = /^(?:ph|phone|cell|mob|mobile|tel|contact)\.?\s*(?:no\.?)?\s*[:\-]?\s*/i;
+
+    const byId = new Map(ORDERS.map(o => [String(o.orderId), o]));
+    const custom = [];
+    let customSeq = 0;
+
+    /* ------------------------------------------------------ pasted addresses */
+
+    function parsePasted(text) {
+        // Excel pastes wrap cells in quotes and separate them with tabs.
+        const lines = text.replace(/\r/g, "").replace(/\t/g, "\n").replace(/"/g, "")
+            .split("\n").map(l => l.trim()).filter(Boolean);
+        const people = [];
+        let cur = null;
+        for (const line of lines) {
+            const m = line.match(/^to\s*:\s*(.*)$/i);
+            if (m) {
+                cur = { name: m[1].trim(), addressLines: [], phones: [] };
+                people.push(cur);
+                continue;
+            }
+            if (!cur) continue;
+            if (PHONE_RE.test(line)) {
+                const num = line.replace(PHONE_PREFIX_RE, "").trim();
+                const key = num.replace(/\D/g, "").slice(-10);
+                if (!cur.phones.some(p => p.replace(/\D/g, "").slice(-10) === key)) cur.phones.push(num);
+            } else {
+                cur.addressLines.push(line);
+            }
+        }
+        return people;
+    }
+
+    function renderCustomList() {
+        $("customList").innerHTML = custom.map(c =>
+            `<div class="d-flex align-items-center gap-2 border-top py-1 small">
+                <span class="flex-grow-1">${esc(c.name)}</span>
+                <button type="button" class="btn btn-sm btn-link text-danger p-0" data-remove-custom="${c.key}"
+                        aria-label="Remove ${esc(c.name)}"><i class="bi bi-trash"></i></button>
+             </div>`).join("");
+    }
+
+    /* ----------------------------------------------------------- label sheet */
+
+    function selectedLabels() {
+        const chosen = [];
+        document.querySelectorAll(".order-check").forEach(cb => {
+            if (cb.checked) {
+                const o = byId.get(cb.value);
+                if (o) chosen.push({ key: "order-" + o.orderId, name: o.customerName,
+                                     addressLines: o.addressLines || [], phones: o.phones || [] });
+            }
+        });
+        return chosen.concat(custom);
+    }
+
+    function cellHtml(label, withRemove) {
+        if (!label) return "";
+        const remove = withRemove
+            ? `<button type="button" class="label-remove no-print" data-remove="${label.key}"
+                       title="Remove this label" aria-label="Remove label for ${esc(label.name)}">&times;</button>`
+            : "";
+        return remove +
+            `<div class="label-name">To: ${esc(label.name)}</div>` +
+            label.addressLines.map(a => `<div>${esc(a)}</div>`).join("") +
+            (label.phones.length ? `<div class="label-phone">Ph: ${label.phones.map(esc).join(" / ")}</div>` : "");
+    }
+
+    function tableHtml(labels, cols, fontSize, minHeight, forWord) {
+        const width = (100 / cols).toFixed(3);
+        let html = `<table class="labels" style="font-size:${fontSize}pt;border-collapse:collapse;width:100%;table-layout:fixed">`;
+        for (let i = 0; i < labels.length; i += cols) {
+            html += "<tr>";
+            for (let j = 0; j < cols; j++) {
+                const style = forWord
+                    ? `width:${width}%;height:${minHeight}mm;border:1px dashed #808080;padding:10px 14px;vertical-align:middle;font-family:Arial,sans-serif;font-size:${fontSize}pt`
+                    : `width:${width}%;height:${minHeight}mm`;
+                html += `<td style="${style}">${cellHtml(labels[i + j], !forWord)}</td>`;
+            }
+            html += "</tr>";
+        }
+        return html + "</table>";
+    }
+
+    function render() {
+        const labels = selectedLabels();
+        const cols = +$("cols").value, fontSize = +$("fontSize").value, minHeight = +$("minHeight").value;
+        $("sheet").innerHTML = labels.length
+            ? tableHtml(labels, cols, fontSize, minHeight, false)
+            : '<p class="text-muted small mb-0">Tick an open order, or paste an address, to build the labels.</p>';
+        $("labelCount").textContent = labels.length ? labels.length + " label(s)" : "Nothing selected";
+        return { labels, cols, fontSize, minHeight };
+    }
+
+    /* --------------------------------------------------------------- wiring */
+
+    ["cols", "fontSize", "minHeight"].forEach(id => $(id).addEventListener("input", render));
+    $("orderPicker").addEventListener("change", render);
+
+    $("selectAll").onclick = () => {
+        document.querySelectorAll(".order-check").forEach(cb => cb.checked = true);
+        render();
+    };
+    $("selectNone").onclick = () => {
+        document.querySelectorAll(".order-check").forEach(cb => cb.checked = false);
+        render();
+    };
+
+    $("addPasted").onclick = () => {
+        const people = parsePasted($("pasteBox").value);
+        if (!people.length) {
+            $("pasteError").textContent = "No address found - each one must start with \"To:\".";
+            return;
+        }
+        $("pasteError").textContent = "";
+        people.forEach(p => custom.push(Object.assign({ key: "custom-" + (++customSeq) }, p)));
+        $("pasteBox").value = "";
+        renderCustomList();
+        render();
+    };
+
+    // One handler for the remove buttons on the sheet and in the pasted-address list.
+    document.addEventListener("click", e => {
+        const sheetBtn = e.target.closest("[data-remove]");
+        if (sheetBtn) {
+            removeLabel(sheetBtn.getAttribute("data-remove"));
+            return;
+        }
+        const listBtn = e.target.closest("[data-remove-custom]");
+        if (listBtn) removeLabel(listBtn.getAttribute("data-remove-custom"));
+    });
+
+    function removeLabel(key) {
+        if (key.indexOf("order-") === 0) {
+            const cb = document.getElementById(key);
+            if (cb) cb.checked = false;
+        } else {
+            const i = custom.findIndex(c => c.key === key);
+            if (i > -1) custom.splice(i, 1);
+            renderCustomList();
+        }
+        render();
+    }
+
+    $("printBtn").onclick = () => { if (render().labels.length) window.print(); };
+
+    $("wordBtn").onclick = () => {
+        const { labels, cols, fontSize, minHeight } = render();
+        if (!labels.length) return;
+        const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"
+            xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><title>Address Labels</title>
+            <style>@page{size:A4;margin:10mm} body{font-family:Arial,sans-serif} .label-name,.label-phone{font-weight:bold} td div{margin:0}</style>
+            </head><body>${tableHtml(labels, cols, fontSize, minHeight, true)}</body></html>`;
+        const blob = new Blob(["\ufeff", html], { type: "application/msword" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "Address_Labels.doc";
+        a.click();
+        URL.revokeObjectURL(a.href);
+    };
+
+    renderCustomList();
+    render();
+})();
+/*]]>*/
+</script>
+</body>
+</html>

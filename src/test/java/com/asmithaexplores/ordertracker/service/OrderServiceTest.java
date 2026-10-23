@@ -353,6 +353,67 @@ class OrderServiceTest {
     }
 
     @Test
+    @DisplayName("Packing is blocked while the shortfall units have not been printed")
+    void packingBlockedWhenShortfallNotPrinted() {
+        Order order = existingOrder(OrderStatus.PRINTING_IN_PROGRESS);
+        order.getOrderItems().get(0).setShortfallQuantity(2);
+        flashCards.setQuantityInHand(0);
+        flashCards.setQuantityToBeOrdered(2);
+        when(orderRepository.findById(100L)).thenReturn(Optional.of(order));
+
+        assertThatThrownBy(() -> orderService.updateStatus(100L, OrderStatus.PACKED, null))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("still to be printed");
+
+        assertThat(order.getOrderStatus()).isEqualTo(OrderStatus.PRINTING_IN_PROGRESS);
+        assertThat(flashCards.getQuantityToBeOrdered()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("Packing a shortfall order needs the full owed quantity in stock")
+    void packingBlockedWhenOnlyPartOfTheShortfallIsPrinted() {
+        Order order = existingOrder(OrderStatus.PRINTING_IN_PROGRESS);
+        order.getOrderItems().get(0).setShortfallQuantity(2);
+        flashCards.setQuantityInHand(1);
+        when(orderRepository.findById(100L)).thenReturn(Optional.of(order));
+
+        assertThatThrownBy(() -> orderService.updateStatus(100L, OrderStatus.PACKED, null))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("1 of 2");
+    }
+
+    @Test
+    @DisplayName("Packing an order removes the printed shortfall units from stock")
+    void packingDeductsShortfallUnits() {
+        Order order = existingOrder(OrderStatus.PRINTING_IN_PROGRESS);
+        order.getOrderItems().get(0).setShortfallQuantity(2);
+        flashCards.setQuantityInHand(5);
+        flashCards.setQuantityToBeOrdered(2);
+        when(orderRepository.findById(100L)).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        orderService.updateStatus(100L, OrderStatus.PACKED, null);
+
+        assertThat(flashCards.getQuantityInHand()).isEqualTo(3);
+        assertThat(flashCards.getQuantityToBeOrdered()).isZero();
+        assertThat(order.getOrderItems().get(0).getShortfallQuantityOrZero()).isZero();
+    }
+
+    @Test
+    @DisplayName("Shipping a packed order does not deduct the shortfall units twice")
+    void shippingAfterPackingKeepsStock() {
+        Order order = existingOrder(OrderStatus.PACKED);
+        order.getOrderItems().get(0).setShortfallQuantity(0);   // already settled while packing
+        flashCards.setQuantityInHand(3);
+        when(orderRepository.findById(100L)).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        orderService.updateStatus(100L, OrderStatus.SHIPPED, "TRK1");
+
+        assertThat(flashCards.getQuantityInHand()).isEqualTo(3);
+    }
+
+    @Test
     @DisplayName("Delivering an order removes the printed shortfall units from stock")
     void deliveryDeductsShortfallUnits() {
         Order order = existingOrder(OrderStatus.SHIPPED);
