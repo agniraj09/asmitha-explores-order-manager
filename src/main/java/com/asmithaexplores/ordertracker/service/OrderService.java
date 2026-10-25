@@ -18,6 +18,7 @@ import com.asmithaexplores.ordertracker.exception.ResourceNotFoundException;
 import com.asmithaexplores.ordertracker.repository.CustomerRepository;
 import com.asmithaexplores.ordertracker.repository.OrderRepository;
 import com.asmithaexplores.ordertracker.repository.ProductRepository;
+import com.asmithaexplores.ordertracker.tracking.TrackingSnapshot;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.jpa.domain.Specification;
@@ -27,6 +28,7 @@ import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -183,6 +185,7 @@ public class OrderService {
         order.setOrderDate(form.getOrderDate() == null ? LocalDate.now() : form.getOrderDate());
         order.setOrderStatus(OrderStatus.NEW);
         order.setCustomizationNotes(trimToNull(form.getCustomizationNotes()));
+        order.setSpecialNotes(trimToNull(form.getSpecialNotes()));
 
         List<String> warnings = addItemsAndDeductStock(order, quantitiesByProduct);
 
@@ -219,6 +222,7 @@ public class OrderService {
         order.setCustomer(customer);
         order.setOrderDate(form.getOrderDate() == null ? LocalDate.now() : form.getOrderDate());
         order.setCustomizationNotes(trimToNull(form.getCustomizationNotes()));
+        order.setSpecialNotes(trimToNull(form.getSpecialNotes()));
 
         List<String> warnings = addItemsAndDeductStock(order, quantitiesByProduct);
 
@@ -244,6 +248,7 @@ public class OrderService {
                 .newCustomer(false)
                 .items(items)
                 .customizationNotes(order.getCustomizationNotes())
+                .specialNotes(order.getSpecialNotes())
                 .orderDate(order.getOrderDate())
                 .build();
     }
@@ -310,6 +315,7 @@ public class OrderService {
     public void updateDetails(OrderEditForm form) {
         Order order = getEntity(form.getId());
         order.setCustomizationNotes(trimToNull(form.getCustomizationNotes()));
+        order.setSpecialNotes(trimToNull(form.getSpecialNotes()));
         String trackingId = trimToNull(form.getTrackingId());
         if (trackingId == null && order.getOrderStatus().ordinal() >= OrderStatus.SHIPPED.ordinal()) {
             throw new BusinessRuleException("A shipped order must keep its tracking id.");
@@ -356,6 +362,37 @@ public class OrderService {
         // orders that were already past packing before this rule existed still settle their units.
         if (targetStatus.ordinal() >= OrderStatus.PACKED.ordinal()) {
             releaseShortfallStock(order);
+        }
+        return toView(orderRepository.save(order));
+    }
+
+    /**
+     * Records what the courier just said about this order's parcel and, when the parcel has been
+     * handed over, moves the order to {@link OrderStatus#DELIVERED} by itself.
+     * <p>
+     * Only a {@link OrderStatus#SHIPPED} order is advanced: anything earlier has not left the shop
+     * (so a stale waybill cannot skip the flow) and {@code DELIVERED} is already final.
+     *
+     * @return the refreshed order, never null
+     */
+    @Transactional
+    public OrderView applyTrackingSnapshot(Long orderId, TrackingSnapshot snapshot) {
+        Order order = getEntity(orderId);
+        order.setTrackingCheckedAt(LocalDateTime.now());
+        order.setDeliveryStatusText(snapshot.summary());
+
+        if (snapshot.delivered()) {
+            LocalDate deliveredOn = snapshot.deliveredAt() == null
+                    ? LocalDate.now()
+                    : snapshot.deliveredAt().toLocalDate();
+            if (order.getOrderStatus() == OrderStatus.SHIPPED) {
+                order.setOrderStatus(OrderStatus.DELIVERED);
+                order.setDeliveredOn(deliveredOn);
+                // Mirrors the manual move: anything the order still owed leaves the shelf now.
+                releaseShortfallStock(order);
+            } else if (order.getOrderStatus() == OrderStatus.DELIVERED && order.getDeliveredOn() == null) {
+                order.setDeliveredOn(deliveredOn);
+            }
         }
         return toView(orderRepository.save(order));
     }
@@ -458,7 +495,11 @@ public class OrderService {
                 .orderDate(order.getOrderDate())
                 .orderStatus(order.getOrderStatus())
                 .trackingId(order.getTrackingId())
+                .deliveryStatusText(order.getDeliveryStatusText())
+                .trackingCheckedAt(order.getTrackingCheckedAt())
+                .deliveredOn(order.getDeliveredOn())
                 .customizationNotes(order.getCustomizationNotes())
+                .specialNotes(order.getSpecialNotes())
                 .items(new ArrayList<>(items))
                 .totalAmount(order.getTotalAmount() == null ? BigDecimal.ZERO : order.getTotalAmount())
                 .totalQuantity(order.getTotalQuantity())

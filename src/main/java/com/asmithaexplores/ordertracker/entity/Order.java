@@ -21,6 +21,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -49,6 +50,10 @@ public class Order {
     @Column(name = "customization_notes", columnDefinition = "text")
     private String customizationNotes;
 
+    /** Anything the owner has to keep in mind for this order: urgency, packing, payment ... */
+    @Column(name = "special_notes", columnDefinition = "text")
+    private String specialNotes;
+
     @Builder.Default
     @Column(name = "order_date", nullable = false)
     private LocalDate orderDate = LocalDate.now();
@@ -60,6 +65,18 @@ public class Order {
 
     @Column(name = "tracking_id", length = 60)
     private String trackingId;
+
+    /** Latest wording from the courier, e.g. "Out for Delivery". Refreshed by the delivery sync. */
+    @Column(name = "delivery_status_text", length = 120)
+    private String deliveryStatusText;
+
+    /** When the courier last answered for this parcel - {@code null} means never looked up. */
+    @Column(name = "tracking_checked_at")
+    private LocalDateTime trackingCheckedAt;
+
+    /** Delivery date reported by the courier, set when the order is auto-moved to DELIVERED. */
+    @Column(name = "delivered_on")
+    private LocalDate deliveredOn;
 
     public void addItem(OrderItem item) {
         item.setOrder(this);

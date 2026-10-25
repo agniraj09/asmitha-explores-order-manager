@@ -8,6 +8,8 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,7 +31,11 @@ public class OrderView {
     private LocalDate orderDate;
     private OrderStatus orderStatus;
     private String trackingId;
+    private String deliveryStatusText;
+    private LocalDateTime trackingCheckedAt;
+    private LocalDate deliveredOn;
     private String customizationNotes;
+    private String specialNotes;
     @Builder.Default
     private List<OrderItemView> items = new ArrayList<>();
     private BigDecimal totalAmount;
@@ -65,6 +71,44 @@ public class OrderView {
 
     public boolean isDelivered() {
         return orderStatus == OrderStatus.DELIVERED;
+    }
+
+    /** The order carries something that has to be read before it is printed or packed. */
+    public boolean isHasNotes() {
+        return (customizationNotes != null && !customizationNotes.isBlank())
+                || (specialNotes != null && !specialNotes.isBlank());
+    }
+
+    /** Both notes in one block, used for the list tooltip and the summary line. */
+    public String getNotesSummary() {
+        StringBuilder summary = new StringBuilder();
+        if (specialNotes != null && !specialNotes.isBlank()) {
+            summary.append("Special: ").append(specialNotes.trim());
+        }
+        if (customizationNotes != null && !customizationNotes.isBlank()) {
+            if (summary.length() > 0) {
+                summary.append('\n');
+            }
+            summary.append("Customization: ").append(customizationNotes.trim());
+        }
+        return summary.toString();
+    }
+
+    /** Orders that carry notes are highlighted so they are never printed or packed blindly. */
+    public String getRowClass() {
+        return isHasNotes() ? "table-info" : "";
+    }
+
+    /** A courier lookup is only worth offering once the parcel is on the road with a waybill. */
+    public boolean isTrackable() {
+        return isShipped() && trackingId != null && !trackingId.isBlank();
+    }
+
+    /** "24 Oct 2026, 10:36 PM" for the last courier lookup, or {@code null} when never checked. */
+    public String getTrackingCheckedAtLabel() {
+        return trackingCheckedAt == null
+                ? null
+                : trackingCheckedAt.format(DateTimeFormatter.ofPattern("dd MMM yyyy, hh:mm a"));
     }
 
     /** Whole days since the order was placed (0 = placed today). */

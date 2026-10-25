@@ -1,6 +1,7 @@
 package com.asmithaexplores.ordertracker.service;
 
 import com.asmithaexplores.ordertracker.dto.OrderCreationResult;
+import com.asmithaexplores.ordertracker.dto.OrderEditForm;
 import com.asmithaexplores.ordertracker.dto.OrderForm;
 import com.asmithaexplores.ordertracker.dto.OrderItemForm;
 import com.asmithaexplores.ordertracker.dto.OrderView;
@@ -14,6 +15,8 @@ import com.asmithaexplores.ordertracker.exception.ResourceNotFoundException;
 import com.asmithaexplores.ordertracker.repository.CustomerRepository;
 import com.asmithaexplores.ordertracker.repository.OrderRepository;
 import com.asmithaexplores.ordertracker.repository.ProductRepository;
+import com.asmithaexplores.ordertracker.tracking.TrackingEvent;
+import com.asmithaexplores.ordertracker.tracking.TrackingSnapshot;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -25,6 +28,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -442,6 +446,114 @@ class OrderServiceTest {
         orderService.updateStatus(100L, OrderStatus.DELIVERED, null);
 
         assertThat(flashCards.getQuantityInHand()).isEqualTo(5);
+    }
+
+    /* ------------------------------------------- automatic delivery detection */
+    @Test
+    @DisplayName("A courier reporting the parcel as delivered moves a shipped order to delivered")
+    void trackingSnapshotDeliversShippedOrder() {
+        Order order = existingOrder(OrderStatus.SHIPPED);
+        order.setTrackingId("22620340116");
+        order.getOrderItems().get(0).setShortfallQuantity(2);
+        flashCards.setQuantityInHand(5);
+        flashCards.setQuantityToBeOrdered(2);
+        when(orderRepository.findById(100L)).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        OrderView view = orderService.applyTrackingSnapshot(100L, new TrackingSnapshot(
+                true, "Delivered", LocalDateTime.of(2026, 10, 25, 11, 20),
+                List.of(new TrackingEvent(LocalDateTime.of(2026, 10, 25, 11, 20), "Delivered", "RAJAPALAYAM, TN"))));
+
+        assertThat(view.getOrderStatus()).isEqualTo(OrderStatus.DELIVERED);
+        assertThat(order.getDeliveredOn()).isEqualTo(LocalDate.of(2026, 10, 25));
+        assertThat(order.getDeliveryStatusText()).isEqualTo("Delivered");
+        assertThat(order.getTrackingCheckedAt()).isNotNull();
+        // The printed shortfall units leave the shelf, exactly as on a manual delivery
+        assertThat(flashCards.getQuantityInHand()).isEqualTo(3);
+        assertThat(flashCards.getQuantityToBeOrdered()).isZero();
+    }
+
+    @Test
+    @DisplayName("A parcel still on the road only refreshes the courier status, never the order status")
+    void trackingSnapshotKeepsUndeliveredOrderShipped() {
+        Order order = existingOrder(OrderStatus.SHIPPED);
+        when(orderRepository.findById(100L)).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        OrderView view = orderService.applyTrackingSnapshot(100L, new TrackingSnapshot(
+                false, "Un Delivered", null,
+                List.of(new TrackingEvent(LocalDateTime.now(), "Out for Delivery", "RAJAPALAYAM, TN"))));
+
+        assertThat(view.getOrderStatus()).isEqualTo(OrderStatus.SHIPPED);
+        assertThat(order.getDeliveredOn()).isNull();
+        assertThat(order.getDeliveryStatusText()).isEqualTo("Out for Delivery");
+    }
+
+    @Test
+    @DisplayName("A stale waybill cannot push an order that has not shipped yet")
+    void trackingSnapshotDoesNotSkipTheStatusFlow() {
+        Order order = existingOrder(OrderStatus.PACKED);
+        when(orderRepository.findById(100L)).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        OrderView view = orderService.applyTrackingSnapshot(100L, new TrackingSnapshot(
+                true, "Delivered", LocalDateTime.now(), List.of()));
+
+        assertThat(view.getOrderStatus()).isEqualTo(OrderStatus.PACKED);
+        assertThat(order.getDeliveredOn()).isNull();
+    }
+
+    /* ------------------------------------------------------------------ notes */
+
+    @Test
+    @DisplayName("Customization and special notes are stored with a new order")
+    void createOrderStoresBothNotes() {
+        when(customerRepository.findById(1L)).thenReturn(Optional.of(customer));
+        when(productRepository.findById(10L)).thenReturn(Optional.of(flashCards));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        OrderForm form = orderForm(10L, 1);
+        form.setSpecialNotes("  Urgent - needed by Friday  ");
+
+        orderService.create(form);
+
+        ArgumentCaptor<Order> captor = ArgumentCaptor.forClass(Order.class);
+        verify(orderRepository).save(captor.capture());
+        assertThat(captor.getValue().getCustomizationNotes()).isEqualTo("Print the name Aarav");
+        assertThat(captor.getValue().getSpecialNotes()).isEqualTo("Urgent - needed by Friday");
+    }
+
+    @Test
+    @DisplayName("Special notes can still be edited after the order has shipped")
+    void updateDetailsEditsSpecialNotes() {
+        Order order = existingOrder(OrderStatus.SHIPPED);
+        order.setTrackingId("FE7781234567");
+        order.setSpecialNotes("Urgent");
+        when(orderRepository.findById(100L)).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        orderService.updateDetails(OrderEditForm.builder()
+                .id(100L)
+                .trackingId("FE7781234567")
+                .customizationNotes("Print the name Aarav")
+                .specialNotes("Customer will collect from the shop")
+                .build());
+
+        assertThat(order.getSpecialNotes()).isEqualTo("Customer will collect from the shop");
+        assertThat(order.getCustomizationNotes()).isEqualTo("Print the name Aarav");
+    }
+
+    @Test
+    @DisplayName("Clearing the special notes removes them")
+    void updateDetailsClearsSpecialNotes() {
+        Order order = existingOrder(OrderStatus.NEW);
+        order.setSpecialNotes("Urgent");
+        when(orderRepository.findById(100L)).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        orderService.updateDetails(OrderEditForm.builder().id(100L).specialNotes("   ").build());
+
+        assertThat(order.getSpecialNotes()).isNull();
     }
 
     private Order existingOrder(OrderStatus status) {

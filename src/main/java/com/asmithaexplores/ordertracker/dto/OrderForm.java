@@ -45,6 +45,9 @@ public class OrderForm {
     @Size(max = 2000, message = "Notes cannot be longer than 2000 characters")
     private String customizationNotes;
 
+    @Size(max = 2000, message = "Special notes cannot be longer than 2000 characters")
+    private String specialNotes;
+
     @NotNull(message = "Order date is required")
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
     @Builder.Default

@@ -14,6 +14,7 @@ import com.asmithaexplores.ordertracker.exception.BusinessRuleException;
 import com.asmithaexplores.ordertracker.service.CustomerService;
 import com.asmithaexplores.ordertracker.service.OrderService;
 import com.asmithaexplores.ordertracker.service.ProductService;
+import com.asmithaexplores.ordertracker.tracking.DeliveryStatusSyncService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
@@ -41,6 +42,7 @@ public class OrderController {
     private final OrderService orderService;
     private final CustomerService customerService;
     private final ProductService productService;
+    private final DeliveryStatusSyncService deliveryStatusSyncService;
     private final AppProperties appProperties;
 
     @ModelAttribute("activeTab")
@@ -178,6 +180,7 @@ public class OrderController {
             model.addAttribute("orderEditForm", OrderEditForm.builder()
                     .id(order.getId())
                     .customizationNotes(order.getCustomizationNotes())
+                    .specialNotes(order.getSpecialNotes())
                     .trackingId(order.getTrackingId())
                     .build());
         }
@@ -210,6 +213,23 @@ public class OrderController {
         OrderView updated = orderService.updateStatus(id, targetStatus, trackingId);
         redirectAttributes.addFlashAttribute("successMessage",
                 "Order #" + id + " is now " + updated.getOrderStatus().getLabel() + ".");
+        return "redirect:/orders/" + id;
+    }
+
+    /** On-demand courier lookup for one order; the background sync does the same on a timer. */
+    @PostMapping("/{id}/tracking/sync")
+    public String syncTracking(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+        DeliveryStatusSyncService.SyncResult result = deliveryStatusSyncService.syncOrder(id);
+        if (!result.courierAnswered()) {
+            redirectAttributes.addFlashAttribute("errorMessage",
+                    "The courier did not return a status for this tracking id. Please try again later.");
+        } else if (result.newlyDelivered()) {
+            redirectAttributes.addFlashAttribute("successMessage",
+                    "Order #" + id + " was delivered - status updated automatically.");
+        } else {
+            redirectAttributes.addFlashAttribute("successMessage",
+                    "Courier status: " + result.order().getDeliveryStatusText());
+        }
         return "redirect:/orders/" + id;
     }
 

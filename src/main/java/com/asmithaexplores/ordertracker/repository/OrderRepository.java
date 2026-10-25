@@ -23,6 +23,9 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
 
     List<Order> findByOrderStatusNotOrderByOrderDateAscIdAsc(OrderStatus status);
 
+    /** Candidates for the delivery sync: on the road, with something to look up. */
+    List<Order> findByOrderStatusAndTrackingIdIsNotNullOrderByOrderDateAscIdAsc(OrderStatus status);
+
     @Query("select o.customer.id, count(o) from Order o group by o.customer.id")
     List<Object[]> countGroupedByCustomer();
 }

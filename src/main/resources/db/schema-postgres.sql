@@ -44,6 +44,10 @@ create table if not exists orders (
     order_status        varchar(30) not null,
     tracking_id         varchar(60),
     customization_notes text,
+    special_notes        text,
+    delivery_status_text varchar(120),
+    tracking_checked_at  timestamp,
+    delivered_on         date,
     primary key (id),
     constraint ck_orders_status check (
         order_status in ('NEW', 'PRINTING_IN_PROGRESS', 'PACKED', 'SHIPPED', 'DELIVERED')
@@ -64,6 +68,13 @@ create table if not exists order_items (
 -- ------------------------------------------------------------- foreign keys
 do $$
 begin
+    -- Delivery detection columns, added after the first release.
+    alter table orders add column if not exists delivery_status_text varchar(120);
+    alter table orders add column if not exists tracking_checked_at  timestamp;
+    alter table orders add column if not exists delivered_on         date;
+    -- Owner-facing notes, added after the first release.
+    alter table orders add column if not exists special_notes        text;
+
     if not exists (select 1 from pg_constraint where conname = 'fk_orders_customer') then
         alter table orders
             add constraint fk_orders_customer

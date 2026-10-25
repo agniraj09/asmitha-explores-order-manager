@@ -31,6 +31,45 @@ class OrderViewTest {
     }
 
     @Test
+    @DisplayName("An order without notes is not highlighted")
+    void orderWithoutNotesIsNotHighlighted() {
+        assertThat(order.isHasNotes()).isFalse();
+        assertThat(order.getRowClass()).isEmpty();
+        assertThat(order.getNotesSummary()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Customization notes alone already highlight the order")
+    void customizationNotesHighlightTheOrder() {
+        order.setCustomizationNotes("Print the name Aarav");
+
+        assertThat(order.isHasNotes()).isTrue();
+        assertThat(order.getRowClass()).isEqualTo("table-info");
+        assertThat(order.getNotesSummary()).isEqualTo("Customization: Print the name Aarav");
+    }
+
+    @Test
+    @DisplayName("Special notes highlight the order and come first in the summary")
+    void specialNotesHighlightTheOrder() {
+        order.setCustomizationNotes("Print the name Aarav");
+        order.setSpecialNotes("Urgent - needed by Friday");
+
+        assertThat(order.getRowClass()).isEqualTo("table-info");
+        assertThat(order.getNotesSummary())
+                .isEqualTo("Special: Urgent - needed by Friday\nCustomization: Print the name Aarav");
+    }
+
+    @Test
+    @DisplayName("Blank notes do not highlight the order")
+    void blankNotesAreIgnored() {
+        order.setCustomizationNotes("   ");
+        order.setSpecialNotes("");
+
+        assertThat(order.isHasNotes()).isFalse();
+        assertThat(order.getRowClass()).isEmpty();
+    }
+
+    @Test
     @DisplayName("The tracking message carries the courier link it is given")
     void trackingMessageIncludesTheGivenTrackingUrl() {
         String message = order.trackingMessage("https://franchexpress.com/courier-tracking/");

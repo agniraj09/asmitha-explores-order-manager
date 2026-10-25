@@ -106,6 +106,13 @@
                                       placeholder="Names to print, colours, theme, gift wrap ..."
                                       th:field="*{customizationNotes}"></textarea>
                         </div>
+                        <div class="mt-3">
+                            <label class="form-label" for="specialNotes">Special notes</label>
+                            <textarea id="specialNotes" rows="3" class="form-control"
+                                      placeholder="Urgent delivery, payment pending, fragile packing ..."
+                                      th:field="*{specialNotes}"></textarea>
+                            <div class="form-text">Orders with notes are highlighted in the order list.</div>
+                        </div>
                     </div>
                 </div>
             </div>

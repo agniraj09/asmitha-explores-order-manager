@@ -161,6 +161,7 @@ public class DataSeeder implements CommandLineRunner {
                 .customerId(divya.getId())
                 .orderDate(LocalDate.now().minusDays(1))
                 .customizationNotes("Gift wrap, no invoice inside.")
+                .specialNotes("Needed before the weekend - customer is travelling on Saturday.")
                 .items(List.of(
                         item(catalogue, "Phonics Flash Cards", 2),
                         item(catalogue, "Having Fun With Phonics", 1)))

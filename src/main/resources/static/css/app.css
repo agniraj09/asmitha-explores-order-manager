@@ -342,6 +342,8 @@ a:hover { color: var(--brand); }
 .table-hover tbody tr:hover { background-color: var(--brand-tint); }
 .table tbody tr.table-warning { --bs-table-bg: #FEF6E0; }
 .table tbody tr.table-danger { --bs-table-bg: #FDECEF; }
+/* Orders carrying customization / special notes */
+.table tbody tr.table-info { --bs-table-bg: #E9F6FD; }
 
 /* --------------------------------------------------------- forms */
 .form-label { font-weight: 600; color: var(--ink); font-size: .88rem; }
@@ -498,6 +500,7 @@ a:hover { color: var(--brand); }
     table.table-hover.table-stack > tbody > tr:hover { background-color: transparent; }
     table.table-stack > tbody > tr.table-warning { background: #FEF6E0; }
     table.table-stack > tbody > tr.table-danger { background: #FDECEF; }
+    table.table-stack > tbody > tr.table-info { background: #E9F6FD; }
 
     table.table-stack > tbody > tr > td,
     table.table-stack > tfoot > tr > td {

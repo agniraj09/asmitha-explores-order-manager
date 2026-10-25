@@ -59,6 +59,20 @@
                 </div>
             </div>
 
+            <div class="card mb-4" th:if="${order.hasNotes}">
+                <div class="card-header">Notes</div>
+                <div class="card-body">
+                    <div class="mb-3" th:if="${order.specialNotes != null and !order.specialNotes.isBlank()}">
+                        <div class="fw-semibold mb-1"><i class="bi bi-exclamation-circle"></i> Special notes</div>
+                        <p class="wrap-notes mb-0" th:text="${order.specialNotes}">Special notes</p>
+                    </div>
+                    <div th:if="${order.customizationNotes != null and !order.customizationNotes.isBlank()}">
+                        <div class="fw-semibold mb-1"><i class="bi bi-pencil-square"></i> Customization notes</div>
+                        <p class="wrap-notes mb-0" th:text="${order.customizationNotes}">Customization notes</p>
+                    </div>
+                </div>
+            </div>
+
             <div class="card">
                 <div class="card-header">Items</div>
                 <div class="table-responsive table-stack-wrap">
@@ -112,6 +126,11 @@
 
                     <div th:if="${order.nextStatus == null}" class="alert alert-success mb-0">
                         This order is delivered. Nothing more to do. 🎉
+                        <div class="small mt-1" th:if="${order.deliveredOn != null}">
+                            Delivered on
+                            <span th:text="${#temporals.format(order.deliveredOn, 'dd MMM yyyy')}">01 Jan 2026</span>
+                            (reported by the courier).
+                        </div>
                     </div>
 
                     <div class="alert alert-warning" th:if="${order.waitingForPrint}">
@@ -145,6 +164,34 @@
                         </button>
                     </form>
                     <p class="form-text mb-0 mt-2">Status can only move forward, one step at a time.</p>
+                </div>
+            </div>
+
+            <div class="card mb-4" th:if="${order.trackable}">
+                <div class="card-header">Courier tracking</div>
+                <div class="card-body">
+                    <p class="mb-1">
+                        Tracking id: <span class="fw-semibold" th:text="${order.trackingId}">123456</span>
+                    </p>
+                    <p class="mb-1" th:if="${order.deliveryStatusText != null}">
+                        Latest status:
+                        <span class="fw-semibold" th:text="${order.deliveryStatusText}">Out for delivery</span>
+                    </p>
+                    <p class="form-text" th:if="${order.trackingCheckedAtLabel != null}">
+                        Last checked <span th:text="${order.trackingCheckedAtLabel}">01 Jan 2026, 10:00 AM</span>
+                    </p>
+                    <p class="form-text" th:if="${order.trackingCheckedAtLabel == null}">
+                        Not checked with the courier yet.
+                    </p>
+                    <form method="post" th:action="@{'/orders/' + ${order.id} + '/tracking/sync'}">
+                        <button class="btn btn-outline-primary w-100" type="submit">
+                            <i class="bi bi-arrow-repeat"></i> Check courier status now
+                        </button>
+                    </form>
+                    <div class="form-text mt-2">
+                        Shipped orders are checked automatically in the background and move to
+                        Delivered on their own once the courier reports the parcel as delivered.
+                    </div>
                 </div>
             </div>
 
@@ -202,6 +249,16 @@
                                       th:classappend="${#fields.hasErrors('customizationNotes')} ? 'is-invalid'"></textarea>
                             <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('customizationNotes')}"
                                  th:errors="*{customizationNotes}">error
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="specialNotes">Special notes</label>
+                            <textarea id="specialNotes" rows="4" class="form-control"
+                                      placeholder="Urgent delivery, payment pending, fragile packing ..."
+                                      th:field="*{specialNotes}"
+                                      th:classappend="${#fields.hasErrors('specialNotes')} ? 'is-invalid'"></textarea>
+                            <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('specialNotes')}"
+                                 th:errors="*{specialNotes}">error
                             </div>
                         </div>
                         <button class="btn btn-primary w-100" type="submit">Save details</button>

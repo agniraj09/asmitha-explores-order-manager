@@ -74,7 +74,7 @@
                 </tr>
                 </thead>
                 <tbody>
-                <tr th:each="o : ${orders}">
+                <tr th:each="o : ${orders}" th:classappend="${o.rowClass}">
                     <td class="cell-hide-sm"><a th:href="@{'/orders/' + ${o.id}}" th:text="${o.id}">1</a></td>
                     <td class="text-nowrap" data-label="Date"
                         th:text="${#temporals.format(o.orderDate, 'dd MMM yyyy')}">date
@@ -87,7 +87,13 @@
                                th:text="${o.customerMobileNumber}">mobile</a>
                         </div>
                     </td>
-                    <td class="small" data-label="Items" th:text="${o.itemsSummary}">items</td>
+                    <td class="small" data-label="Items">
+                        <span th:text="${o.itemsSummary}">items</span>
+                        <span class="badge text-bg-info ms-1" th:if="${o.hasNotes}"
+                              th:title="${o.notesSummary}">
+                            <i class="bi bi-sticky"></i> Notes
+                        </span>
+                    </td>
                     <td data-label="Status">
                         <span>
                             <span th:replace="~{fragments/layout :: statusBadge(${o.orderStatus})}"></span>

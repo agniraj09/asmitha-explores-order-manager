@@ -14,10 +14,12 @@ Built with **Java 17 · Spring Boot 3 · Spring MVC · Spring Data JPA · Thymel
 | **Dashboard** (`/`) | Orders per status, orders not yet delivered **with an "Open for" ageing column in red**, a **To print / restock** to-do list with a one-click **Ordered** button, orders & revenue this month |
 | **Customers** (`/customers`) | List with search by name/mobile, computed order count, add/edit, delete (blocked when the customer has orders), detail page with full order history |
 | **Inventory** (`/products`) | Catalogue mirrored from the storefront (name, **category**, price), **out-of-stock rows highlighted in red** with an "Out of stock" badge, add/edit/delete |
-| **Orders** (`/orders`) | Create with **"add new customer" as the default** (switch off to pick an existing one), product picker grouped by category, multiple products per order, filters by status/customer/date range, coloured status badges |
+| **Orders** (`/orders`) | Create with **"add new customer" as the default** (switch off to pick an existing one), product picker grouped by category, multiple products per order, filters by status/customer/date range, coloured status badges, **orders carrying customization or special notes highlighted in blue** with a "Notes" badge |
 | **Order editing** | While an order is still `NEW` you can change customer, date, products, quantities and notes — stock is reversed and re-applied automatically. After that only notes/tracking id can be edited |
+| **Notes** | Two free-text fields per order: **customization notes** (what the customer asked for) and **special notes** (anything the owner must remember) — both editable at any stage and shown on the order page |
 | **Stock handling** | Creating an order reduces `quantityInHand`; when stock is short the order is still accepted and the shortfall is added to `quantityToBeOrdered` with a warning |
 | **Status flow** | Forward-only: `NEW → PRINTING_IN_PROGRESS → PACKED → SHIPPED → DELIVERED`, tracking id mandatory for `SHIPPED` |
+| **Delivery detection** | Shipped orders are polled against the courier's tracking service on a timer and move to `DELIVERED` by themselves — the order page shows the latest courier status, when it was last checked, the reported delivery date and a **Check courier status now** button |
 | **WhatsApp** | Shipped/delivered orders get a "Send on WhatsApp" button that opens a chat with the customer carrying a templated message — tracking id, courier tracking link, items and total. The courier link defaults to `app.tracking-url` and can be overridden per order before sending |
 
 ---
@@ -193,6 +195,12 @@ The PostgreSQL driver is already on the classpath — no `pom.xml` change needed
 | `app.seed-data` | — | `true` (local) / `false` (prod) | Seed demo data when the database is empty |
 | `app.shop-name` | — | `Asmitha Explores` | Shop name used in messages |
 | `app.tracking-url` | `TRACKING_URL` | `https://franchexpress.com/courier-tracking/` | Courier tracking link pre-filled in the WhatsApp message; overridable per order in the UI |
+| `app.tracking.auto-sync-enabled` | `TRACKING_AUTO_SYNC` | `true` | Poll the courier for shipped orders and auto-move delivered ones |
+| `app.tracking.api-url` | `TRACKING_API_URL` | `https://franchexpress.com/proxy.php` | Endpoint behind the courier's tracking page |
+| `app.tracking.interval-ms` | `TRACKING_SYNC_INTERVAL_MS` | `21600000` (6 hours) | How often the delivery sync runs |
+| `app.tracking.initial-delay-ms` | `TRACKING_SYNC_INITIAL_DELAY_MS` | `120000` | Delay before the first run after startup |
+| `app.tracking.max-age-days` | — | `45` | Shipped orders older than this are no longer polled |
+| `app.tracking.request-delay-ms` | — | `1000` | Pause between two courier lookups in one run |
 | `server.port` | `PORT` | `8080` | HTTP port |
 | `spring.profiles.active` | `SPRING_PROFILES_ACTIVE` | `local` | Active profile |
 | `spring.jpa.hibernate.ddl-auto` | `DB_DDL_AUTO` | `update` | Schema handling in `prod` |
@@ -218,6 +226,8 @@ src/main/java/com/asmithaexplores/ordertracker
 ├── entity/      Customer, Product, Order, OrderItem, OrderStatus
 ├── exception/   ResourceNotFoundException, BusinessRuleException
 ├── repository/  CustomerRepository, ProductRepository, OrderRepository, OrderItemRepository
+├── tracking/    CourierTrackingClient, FranchExpressTrackingClient,
+│                DeliveryStatusSyncService, TrackingSnapshot, TrackingEvent
 └── service/     CustomerService, ProductService, OrderService, DashboardService
 
 src/main/resources
