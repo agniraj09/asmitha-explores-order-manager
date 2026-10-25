@@ -7,6 +7,7 @@ import com.asmithaexplores.ordertracker.dto.OrderFilter;
 import com.asmithaexplores.ordertracker.dto.OrderForm;
 import com.asmithaexplores.ordertracker.dto.OrderItemForm;
 import com.asmithaexplores.ordertracker.dto.OrderItemView;
+import com.asmithaexplores.ordertracker.dto.OrderPeriodSummary;
 import com.asmithaexplores.ordertracker.dto.OrderView;
 import com.asmithaexplores.ordertracker.entity.Customer;
 import com.asmithaexplores.ordertracker.entity.Order;
@@ -152,17 +153,24 @@ public class OrderService {
     public Map<OrderStatus, Long> countPerStatus() {
         Map<OrderStatus, Long> counts = new LinkedHashMap<>();
         for (OrderStatus status : OrderStatus.values()) {
-            counts.put(status, orderRepository.countByOrderStatus(status));
+            counts.put(status, 0L);
+        }
+        for (Object[] row : orderRepository.countGroupedByStatus()) {
+            counts.put((OrderStatus) row[0], ((Number) row[1]).longValue());
         }
         return counts;
     }
 
-    public long countBetween(LocalDate from, LocalDate to) {
-        return orderRepository.countByOrderDateBetween(from, to);
-    }
-
-    public long count() {
-        return orderRepository.count();
+    /** How many orders were placed between the two dates and what they were worth. */
+    public OrderPeriodSummary summariseBetween(LocalDate from, LocalDate to) {
+        List<Object[]> rows = orderRepository.summariseOrdersBetween(from, to);
+        if (rows.isEmpty()) {
+            return new OrderPeriodSummary(0L, BigDecimal.ZERO);
+        }
+        Object[] row = rows.get(0);
+        long count = row[0] == null ? 0L : ((Number) row[0]).longValue();
+        BigDecimal value = row[1] == null ? BigDecimal.ZERO : (BigDecimal) row[1];
+        return new OrderPeriodSummary(count, value);
     }
 
     /* ----------------------------------------------------------------- writes */

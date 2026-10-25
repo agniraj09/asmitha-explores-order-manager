@@ -1,17 +1,16 @@
 package com.asmithaexplores.ordertracker.service;
 
 import com.asmithaexplores.ordertracker.dto.DashboardView;
-import com.asmithaexplores.ordertracker.dto.OrderFilter;
-import com.asmithaexplores.ordertracker.dto.OrderView;
+import com.asmithaexplores.ordertracker.dto.OrderPeriodSummary;
+import com.asmithaexplores.ordertracker.entity.OrderStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -29,23 +28,18 @@ public class DashboardService {
         LocalDate firstDayOfMonth = today.withDayOfMonth(1);
         LocalDate lastDayOfMonth = today.withDayOfMonth(today.lengthOfMonth());
 
-        List<OrderView> ordersThisMonth = orderService.search(
-                OrderFilter.builder().fromDate(firstDayOfMonth).toDate(lastDayOfMonth).build());
-
-        BigDecimal revenue = ordersThisMonth.stream()
-                .map(OrderView::getTotalAmount)
-                .filter(java.util.Objects::nonNull)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        Map<OrderStatus, Long> ordersPerStatus = orderService.countPerStatus();
+        OrderPeriodSummary thisMonth = orderService.summariseBetween(firstDayOfMonth, lastDayOfMonth);
 
         return DashboardView.builder()
-                .ordersPerStatus(orderService.countPerStatus())
+                .ordersPerStatus(ordersPerStatus)
                 .pendingOrders(orderService.findPendingOrders())
                 .restockProducts(productService.findNeedingRestock())
                 .outOfStockProducts(productService.findOutOfStock())
-                .totalOrdersThisMonth(ordersThisMonth.size())
-                .totalOrders(orderService.count())
+                .totalOrdersThisMonth(thisMonth.getOrderCount())
+                .totalOrders(ordersPerStatus.values().stream().mapToLong(Long::longValue).sum())
                 .totalCustomers(customerService.count())
-                .revenueThisMonth(revenue)
+                .revenueThisMonth(thisMonth.getOrderValue())
                 .currentMonthLabel(today.format(MONTH_FORMAT))
                 .build();
     }
