@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Finance')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar(${activeTab})}"></nav>
+
+<div class="container pb-5">
+    <div th:replace="~{fragments/layout :: alerts}"></div>
+
+    <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3 page-header">
+        <div>
+            <h1 class="h3 page-title mb-0">Finance</h1>
+            <small class="text-muted">
+                Income is booked automatically from orders · expenses are added by hand
+            </small>
+        </div>
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-secondary" th:href="@{/transactions/tags}">
+                <i class="bi bi-tags"></i> Tags</a>
+            <a class="btn btn-primary" th:href="@{/transactions/new}">
+                <i class="bi bi-plus-lg"></i> Add expense</a>
+        </div>
+    </div>
+
+    <!-- KPI cards for whatever the filter currently shows -->
+    <div class="row g-3 mb-3">
+        <div class="col-6 col-lg-3">
+            <div class="card card-accent stat-card h-100">
+                <div class="card-body">
+                    <div class="stat-label">Income</div>
+                    <div class="stat-value text-success">₹<span
+                            th:text="${#numbers.formatDecimal(summary.totalIncome, 1, 'COMMA', 2, 'POINT')}">0.00</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card card-accent stat-card h-100">
+                <div class="card-body">
+                    <div class="stat-label">Expenses</div>
+                    <div class="stat-value text-danger">₹<span
+                            th:text="${#numbers.formatDecimal(summary.totalExpense, 1, 'COMMA', 2, 'POINT')}">0.00</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card card-accent stat-card h-100">
+                <div class="card-body">
+                    <div class="stat-label" th:text="${summary.profitable} ? 'Profit' : 'Loss'">Profit</div>
+                    <div class="stat-value"
+                         th:classappend="${summary.profitable} ? 'text-success' : 'text-danger'">₹<span
+                            th:text="${#numbers.formatDecimal(summary.net, 1, 'COMMA', 2, 'POINT')}">0.00</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card card-accent stat-card h-100">
+                <div class="card-body">
+                    <div class="stat-label">Entries</div>
+                    <div class="stat-value" th:text="${summary.transactionCount}">0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <form class="card card-body mb-3" method="get" th:action="@{/transactions}" th:object="${filter}">
+        <button class="btn btn-outline-secondary d-lg-none w-100 justify-content-between" type="button"
+                data-bs-toggle="collapse" data-bs-target="#filterFields" aria-expanded="false"
+                aria-controls="filterFields">
+            <span><i class="bi bi-funnel"></i> Filters</span>
+            <span class="badge text-bg-secondary" th:unless="${#maps.isEmpty(param)}">on</span>
+            <i class="bi bi-chevron-down" th:if="${#maps.isEmpty(param)}"></i>
+        </button>
+        <div class="collapse d-lg-block" id="filterFields"
+             th:classappend="${#maps.isEmpty(param)} ? '' : 'show'">
+            <div class="row g-2 align-items-end">
+                <div class="col-6 col-md-2">
+                    <label class="form-label" for="type">Type</label>
+                    <select id="type" class="form-select" th:field="*{type}">
+                        <option value="">All</option>
+                        <option th:each="t : ${types}" th:value="${t.name()}" th:text="${t.label}">Type</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-3">
+                    <label class="form-label" for="category">For</label>
+                    <select id="category" class="form-select" th:field="*{category}">
+                        <option value="">All categories</option>
+                        <optgroup label="Income">
+                            <option th:each="c : ${incomeCategories}" th:value="${c.name()}"
+                                    th:text="${c.label}">Category
+                            </option>
+                        </optgroup>
+                        <optgroup label="Expense">
+                            <option th:each="c : ${expenseCategories}" th:value="${c.name()}"
+                                    th:text="${c.label}">Category
+                            </option>
+                        </optgroup>
+                    </select>
+                </div>
+                <div class="col-12 col-md-3">
+                    <label class="form-label" for="tagId">Tag</label>
+                    <select id="tagId" class="form-select" th:field="*{tagId}">
+                        <option value="">All tags</option>
+                        <option th:each="tag : ${tags}" th:value="${tag.id}" th:text="${tag.name}">Tag</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label" for="fromDate">From</label>
+                    <input id="fromDate" type="date" class="form-control" th:field="*{fromDate}">
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label" for="toDate">To</label>
+                    <input id="toDate" type="date" class="form-control" th:field="*{toDate}">
+                </div>
+                <div class="col-12 d-flex gap-2">
+                    <button class="btn btn-outline-secondary" type="submit">Filter</button>
+                    <a class="btn btn-link" th:href="@{/transactions}">Reset</a>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <!-- Expense breakdown -->
+    <div class="row g-3 mb-3" th:if="${!#maps.isEmpty(summary.expenseByCategory)}">
+        <div class="col-12 col-lg-6">
+            <div class="card h-100">
+                <div class="card-header">Expenses by category</div>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between align-items-center"
+                        th:each="entry : ${summary.expenseByCategory}">
+                        <span th:text="${entry.key}">Category</span>
+                        <span class="money">₹<span
+                                th:text="${#numbers.formatDecimal(entry.value, 1, 'COMMA', 2, 'POINT')}">0.00</span></span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <div class="col-12 col-lg-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    Expenses by tag
+                    <small class="text-muted ms-1">an entry counts under each of its tags</small>
+                </div>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between align-items-center"
+                        th:each="entry : ${summary.expenseByTag}">
+                        <span th:text="${entry.key}">Tag</span>
+                        <span class="money">₹<span
+                                th:text="${#numbers.formatDecimal(entry.value, 1, 'COMMA', 2, 'POINT')}">0.00</span></span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ledger -->
+    <div class="card">
+        <div class="table-responsive table-stack-wrap">
+            <table class="table table-hover table-stack align-middle mb-0">
+                <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th>For</th>
+                    <th>Details</th>
+                    <th>Tags</th>
+                    <th class="text-end">Amount</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="t : ${transactions}">
+                    <td data-label="Date" th:text="${t.formattedDate}">01 Jan 2026</td>
+                    <td data-label="Type">
+                        <span class="badge" th:classappend="'text-bg-' + ${t.type.badgeClass}"
+                              th:text="${t.type.label}">Type</span>
+                    </td>
+                    <td data-label="For" th:text="${t.category.label}">Category</td>
+                    <td class="cell-title" data-label="Details">
+                        <a th:if="${t.orderId != null}" th:href="@{'/orders/' + ${t.orderId}}"
+                           th:text="${t.description}">Order</a>
+                        <span th:unless="${t.orderId != null}" th:text="${t.description} ?: '—'">Details</span>
+                        <span class="badge text-bg-light ms-1" th:if="${t.manuallyAdjusted}"
+                              title="Edited by hand - order changes no longer update this amount">adjusted</span>
+                    </td>
+                    <td data-label="Tags">
+                        <span class="badge tag-pill me-1" th:each="tag : ${t.tags}"
+                              th:style="${tag.colorHex != null} ? 'color:' + ${tag.colorHex} + '; border-color:' + ${tag.colorHex} + ';' : null"
+                              th:text="${tag.name}">Tag</span>
+                        <span class="text-muted" th:if="${#lists.isEmpty(t.tags)}">—</span>
+                    </td>
+                    <td class="text-end money" data-label="Amount"
+                        th:classappend="${t.income} ? 'text-success' : 'text-danger'">
+                        <span th:text="${t.income} ? '+' : '−'">+</span>₹<span
+                            th:text="${#numbers.formatDecimal(t.amount, 1, 'COMMA', 2, 'POINT')}">0.00</span>
+                    </td>
+                    <td class="text-end text-nowrap cell-actions">
+                        <a class="btn btn-sm btn-outline-secondary"
+                           th:href="@{'/transactions/' + ${t.id} + '/edit'}">Edit</a>
+                        <form class="d-inline" method="post" th:if="${t.deletable}"
+                              th:action="@{'/transactions/' + ${t.id} + '/delete'}"
+                              onsubmit="return confirm('Delete this transaction?');">
+                            <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(transactions)}">
+                    <td colspan="7" class="text-center text-muted py-4">No transactions match this filter.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

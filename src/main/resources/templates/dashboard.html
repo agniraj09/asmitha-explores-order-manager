@@ -50,6 +50,44 @@
         </div>
     </div>
 
+    <!-- Money this month: booked income from orders minus the expenses entered by hand -->
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-lg-4">
+            <a class="card card-accent stat-card h-100 text-decoration-none" th:href="@{/transactions(type='INCOME')}">
+                <div class="card-body">
+                    <div class="stat-label">Income booked this month</div>
+                    <div class="stat-value text-success">₹<span
+                            th:text="${#numbers.formatDecimal(dashboard.incomeThisMonth, 1, 'COMMA', 2, 'POINT')}">0.00</span>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-6 col-lg-4">
+            <a class="card card-accent stat-card h-100 text-decoration-none" th:href="@{/transactions(type='EXPENSE')}">
+                <div class="card-body">
+                    <div class="stat-label">Expenses this month</div>
+                    <div class="stat-value text-danger">₹<span
+                            th:text="${#numbers.formatDecimal(dashboard.expensesThisMonth, 1, 'COMMA', 2, 'POINT')}">0.00</span>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-6 col-lg-4">
+            <a class="card card-accent stat-card h-100 text-decoration-none" th:href="@{/transactions}">
+                <div class="card-body">
+                    <div class="stat-label"
+                         th:text="${dashboard.profitableThisMonth} ? 'Profit this month' : 'Loss this month'">Profit
+                        this month
+                    </div>
+                    <div class="stat-value"
+                         th:classappend="${dashboard.profitableThisMonth} ? 'text-success' : 'text-danger'">₹<span
+                            th:text="${#numbers.formatDecimal(dashboard.profitThisMonth, 1, 'COMMA', 2, 'POINT')}">0.00</span>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+
     <!-- Orders per status -->
     <div class="card mb-4">
         <div class="card-header">Orders per status</div>

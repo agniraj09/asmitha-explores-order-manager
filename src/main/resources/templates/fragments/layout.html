@@ -56,6 +56,10 @@
                            th:href="@{/products}"><i class="bi bi-box-seam me-1"></i>Inventory</a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" th:classappend="${activeTab == 'transactions'} ? 'active'"
+                           th:href="@{/transactions}"><i class="bi bi-cash-coin me-1"></i>Finance</a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" th:classappend="${activeTab == 'labels'} ? 'active'"
                            th:href="@{/labels/addresses}"><i class="bi bi-tags me-1"></i>Labels</a>
                     </li>
@@ -85,6 +89,9 @@
         </a>
         <a class="tab-item" th:classappend="${activeTab == 'products'} ? 'active'" th:href="@{/products}">
             <i class="bi bi-box-seam"></i><span>Stock</span>
+        </a>
+        <a class="tab-item" th:classappend="${activeTab == 'transactions'} ? 'active'" th:href="@{/transactions}">
+            <i class="bi bi-cash-coin"></i><span>Money</span>
         </a>
     </nav>
 </div>

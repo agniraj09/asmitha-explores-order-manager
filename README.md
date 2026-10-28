@@ -11,7 +11,7 @@ Built with **Java 17 · Spring Boot 3 · Spring MVC · Spring Data JPA · Thymel
 
 | Area | What you get |
 |------|--------------|
-| **Dashboard** (`/`) | Orders per status, orders not yet delivered **with an "Open for" ageing column in red**, a **To print / restock** to-do list with a one-click **Ordered** button, orders & revenue this month |
+| **Dashboard** (`/`) | Orders per status, orders not yet delivered **with an "Open for" ageing column in red**, a **To print / restock** to-do list with a one-click **Ordered** button, orders & revenue this month, plus **income, expenses and profit this month** from the money book |
 | **Customers** (`/customers`) | List with search by name/mobile, computed order count, add/edit, delete (blocked when the customer has orders), detail page with full order history |
 | **Inventory** (`/products`) | Catalogue mirrored from the storefront (name, **category**, price), **out-of-stock rows highlighted in red** with an "Out of stock" badge, add/edit/delete |
 | **Orders** (`/orders`) | Create with **"add new customer" as the default** (switch off to pick an existing one), product picker grouped by category, multiple products per order, filters by status/customer/date range, coloured status badges, **orders carrying customization or special notes highlighted in blue** with a "Notes" badge |
@@ -21,6 +21,9 @@ Built with **Java 17 · Spring Boot 3 · Spring MVC · Spring Data JPA · Thymel
 | **Status flow** | Forward-only: `NEW → PRINTING_IN_PROGRESS → PACKED → SHIPPED → DELIVERED`, tracking id mandatory for `SHIPPED` |
 | **Delivery detection** | Shipped orders are polled against the courier's tracking service on a timer and move to `DELIVERED` by themselves — the order page shows the latest courier status, when it was last checked, the reported delivery date and a **Check courier status now** button |
 | **WhatsApp** | Shipped/delivered orders get a "Send on WhatsApp" button that opens a chat with the customer carrying a templated message — tracking id, courier tracking link, items and total. The courier link defaults to `app.tracking-url` and can be overridden per order before sending |
+| **Finance** (`/transactions`) | The money book. **Income is booked automatically** for every order placed (amount, date and customer taken from the order) and follows it when the order is edited or deleted. **Expenses are added by hand** — printing, packing, shipping charges, transport, materials, other. Filter by type/category/tag/date range and see income, expenses and profit for the current filter, plus breakdowns per category and per tag |
+| **Transaction tags** (`/transactions/tags`) | Your own tag list — Flash Cards, Banners, Courier, Packing material … — with add/edit/delete (delete blocked while a transaction still uses the tag). A transaction can carry **several tags**. Income booked for an order is **auto-tagged with the product categories in that order**, so spend and earnings per product line line up without extra typing |
+| **Correcting booked income** | The income line of an order is editable. Saving your own amount marks it as *adjusted* and later edits to the order no longer overwrite it — your figure wins |
 
 ---
 
@@ -81,6 +84,11 @@ catalogue** — 29 products with their storefront names, categories and prices
 (Flash Cards, Banners, Learning Books, Story Books) — plus 3 sample customers and 3 sample orders
 so the screens are not empty. Stock quantities are placeholders: correct them on the Inventory
 screen. Turn seeding off with `app.seed-data=false` (already off in `prod`).
+
+A starter set of **transaction tags** (Flash Cards, Banners, Learning Books, Story Books, Courier,
+Packing material, General) is created whenever the tag table is empty — independently of
+`app.seed-data`, so the Finance screens are usable on production too. Edit or delete them freely
+from `/transactions/tags`; they are never recreated once the table has rows.
 
 ---
 
@@ -219,16 +227,21 @@ src/main/java/com/asmithaexplores/ordertracker
 ├── OrderTrackerApplication.java
 ├── config/      AppProperties, DataSeeder (real storefront catalogue)
 ├── controller/  DashboardController, CustomerController, ProductController,
-│                OrderController, GlobalExceptionHandler
+│                OrderController, TransactionController, TransactionTagController,
+│                GlobalExceptionHandler
 ├── dto/         CustomerForm/View, ProductForm/View, OrderForm, OrderItemForm,
 │                OrderView, OrderItemView, OrderEditForm, OrderFilter,
-│                OrderCreationResult, DashboardView
-├── entity/      Customer, Product, Order, OrderItem, OrderStatus
+│                OrderCreationResult, DashboardView,
+│                TransactionForm/View/Filter/Summary, TransactionTagForm/View
+├── entity/      Customer, Product, Order, OrderItem, OrderStatus,
+│                Transaction, TransactionTag, TransactionType, TransactionCategory
 ├── exception/   ResourceNotFoundException, BusinessRuleException
-├── repository/  CustomerRepository, ProductRepository, OrderRepository, OrderItemRepository
+├── repository/  CustomerRepository, ProductRepository, OrderRepository, OrderItemRepository,
+│                TransactionRepository, TransactionTagRepository
 ├── tracking/    CourierTrackingClient, FranchExpressTrackingClient,
 │                DeliveryStatusSyncService, TrackingSnapshot, TrackingEvent
-└── service/     CustomerService, ProductService, OrderService, DashboardService
+└── service/     CustomerService, ProductService, OrderService, DashboardService,
+                 TransactionService, TransactionTagService
 
 src/main/resources
 ├── application.properties          common settings (active profile = local by default)
@@ -238,13 +251,15 @@ src/main/resources
 └── templates/   dashboard.html, error.html, fragments/layout.html,
                  customers/{list,form,detail}.html,
                  products/{list,form}.html,
-                 orders/{list,form,detail}.html
+                 orders/{list,form,detail}.html,
+                 transactions/{list,form,tags}.html
 
 src/test/resources
 └── application.properties          in-memory H2 used by mvn test
 
 src/test/java/com/asmithaexplores/ordertracker
 ├── OrderTrackerApplicationTests.java
+├── controller/TransactionControllerTest.java
 └── service/OrderServiceTest.java
 ```
 
@@ -255,6 +270,11 @@ src/test/java/com/asmithaexplores/ordertracker
 `OrderServiceTest` (JUnit 5 + Mockito) covers stock deduction, shortfall handling, duplicate line
 merging, forward-only status transitions, the mandatory tracking id for shipping, and stock
 restoration on delete.
+
+`TransactionControllerTest` (`@SpringBootTest` + MockMvc, in-memory H2) renders the Finance
+screens and covers saving a tagged expense, validation of the amount, the income line booked when
+an order is placed and removed when it is deleted, and the fact that a hand-corrected income line
+is no longer overwritten by later edits to the order.
 
 ```bash
 mvn test

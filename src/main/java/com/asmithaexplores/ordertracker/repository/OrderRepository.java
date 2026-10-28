@@ -25,6 +25,19 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
     List<Object[]> countGroupedByStatus();
 
     /**
+     * Orders that have no income line in the money book yet. Only ever non-empty for orders that
+     * were placed before the Finance feature existed - see
+     * {@link com.asmithaexplores.ordertracker.service.TransactionService#backfillMissingOrderIncome()}.
+     */
+    @EntityGraph(attributePaths = {"customer", "orderItems", "orderItems.product"})
+    @Query("""
+            select o from Order o
+            where not exists (select 1 from Transaction t where t.order = o)
+            order by o.id asc
+            """)
+    List<Order> findWithoutIncomeTransaction();
+
+    /**
      * Number and total value of the orders placed in the given window, in one round trip.
      * Returns a single row of [orderCount, orderValue]; the value is {@code null} when the
      * window holds no order lines at all.

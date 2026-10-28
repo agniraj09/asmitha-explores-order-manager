@@ -2,6 +2,7 @@ package com.asmithaexplores.ordertracker.service;
 
 import com.asmithaexplores.ordertracker.dto.DashboardView;
 import com.asmithaexplores.ordertracker.dto.OrderPeriodSummary;
+import com.asmithaexplores.ordertracker.dto.TransactionSummary;
 import com.asmithaexplores.ordertracker.entity.OrderStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,7 @@ public class DashboardService {
     private final OrderService orderService;
     private final ProductService productService;
     private final CustomerService customerService;
+    private final TransactionService transactionService;
 
     public DashboardView build() {
         LocalDate today = LocalDate.now();
@@ -30,6 +32,7 @@ public class DashboardService {
 
         Map<OrderStatus, Long> ordersPerStatus = orderService.countPerStatus();
         OrderPeriodSummary thisMonth = orderService.summariseBetween(firstDayOfMonth, lastDayOfMonth);
+        TransactionSummary money = transactionService.summariseBetween(firstDayOfMonth, lastDayOfMonth);
 
         return DashboardView.builder()
                 .ordersPerStatus(ordersPerStatus)
@@ -40,6 +43,9 @@ public class DashboardService {
                 .totalOrders(ordersPerStatus.values().stream().mapToLong(Long::longValue).sum())
                 .totalCustomers(customerService.count())
                 .revenueThisMonth(thisMonth.getOrderValue())
+                .incomeThisMonth(money.getTotalIncome())
+                .expensesThisMonth(money.getTotalExpense())
+                .profitThisMonth(money.getNet())
                 .currentMonthLabel(today.format(MONTH_FORMAT))
                 .build();
     }

@@ -48,6 +48,7 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final ProductRepository productRepository;
     private final CustomerRepository customerRepository;
+    private final TransactionService transactionService;
 
     /* ------------------------------------------------------------------ reads */
 
@@ -198,6 +199,7 @@ public class OrderService {
         List<String> warnings = addItemsAndDeductStock(order, quantitiesByProduct);
 
         Order saved = orderRepository.save(order);
+        transactionService.recordOrderIncome(saved);
         return OrderCreationResult.builder().orderId(saved.getId()).warnings(warnings).build();
     }
 
@@ -235,6 +237,7 @@ public class OrderService {
         List<String> warnings = addItemsAndDeductStock(order, quantitiesByProduct);
 
         Order saved = orderRepository.save(order);
+        transactionService.syncOrderIncome(saved);
         return OrderCreationResult.builder().orderId(saved.getId()).warnings(warnings).build();
     }
 
@@ -452,11 +455,15 @@ public class OrderService {
         }
     }
 
-    /** Deletes an order and puts the ordered quantities back into stock. */
+    /**
+     * Deletes an order and puts the ordered quantities back into stock. The income line booked
+     * for the order goes with it, otherwise the money book would keep a sale that never happened.
+     */
     @Transactional
     public void delete(Long orderId) {
         Order order = getEntity(orderId);
         restoreStock(order);
+        transactionService.removeOrderIncome(orderId);
         orderRepository.delete(order);
     }
 

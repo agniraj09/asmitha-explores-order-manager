@@ -322,6 +322,14 @@ a:hover { color: var(--brand); }
 .category-pill[data-category="Learning Books"] { background: #DBEAFE; color: var(--teal-dk); border-color: #BAE6FD; }
 .category-pill[data-category="Story Books"]    { background: #FFEDD5; color: var(--card-accent); border-color: #FED7AA; }
 
+/* Transaction tag pills - the colour itself comes from the tag, set inline */
+.tag-pill {
+    background: #fff;
+    color: var(--ink-soft);
+    border: 1px solid var(--line);
+    font-weight: 600;
+}
+
 /* -------------------------------------------------------- tables */
 .table { --bs-table-bg: transparent; margin-bottom: 0; color: var(--ink-soft); }
 

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Transaction form')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar(${activeTab})}"></nav>
+
+<div class="container pb-5">
+    <div th:replace="~{fragments/layout :: alerts}"></div>
+
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-7">
+            <div class="card">
+                <div class="card-body">
+                    <h1 class="h4 page-title mb-3"
+                        th:text="${editing} ? 'Edit transaction' : 'Add transaction'">Add transaction</h1>
+
+                    <div class="alert alert-info py-2" th:if="${linkedOrderId != null}">
+                        <i class="bi bi-info-circle"></i>
+                        This is the income booked for
+                        <a th:href="@{'/orders/' + ${linkedOrderId}}"
+                           th:text="|order #${linkedOrderId}|">order</a>.
+                        Saving your own amount here stops it from following later edits to that order.
+                    </div>
+
+                    <form method="post" th:action="@{/transactions/save}" th:object="${transactionForm}" novalidate>
+                        <input type="hidden" th:field="*{id}">
+                        <input type="hidden" th:field="*{orderId}">
+
+                        <div class="mb-3">
+                            <label class="form-label" for="category">What was this for?</label>
+                            <select id="category" class="form-select" th:field="*{category}"
+                                    th:classappend="${#fields.hasErrors('category')} ? 'is-invalid'">
+                                <option value="">-- choose --</option>
+                                <optgroup label="Expense">
+                                    <option th:each="c : ${expenseCategories}" th:value="${c.name()}"
+                                            th:text="${c.label}">Category
+                                    </option>
+                                </optgroup>
+                                <optgroup label="Income">
+                                    <option th:each="c : ${incomeCategories}" th:value="${c.name()}"
+                                            th:text="${c.label}">Category
+                                    </option>
+                                </optgroup>
+                            </select>
+                            <div class="invalid-feedback" th:if="${#fields.hasErrors('category')}"
+                                 th:errors="*{category}">error
+                            </div>
+                            <div class="form-text">
+                                The category decides whether the entry counts as money in or money out.
+                            </div>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label" for="amount">Amount (₹)</label>
+                                <input id="amount" type="number" step="0.01" min="0" inputmode="decimal"
+                                       class="form-control" th:field="*{amount}"
+                                       th:classappend="${#fields.hasErrors('amount')} ? 'is-invalid'">
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('amount')}"
+                                     th:errors="*{amount}">error
+                                </div>
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label" for="transactionDate">Date</label>
+                                <input id="transactionDate" type="date" class="form-control"
+                                       th:field="*{transactionDate}"
+                                       th:classappend="${#fields.hasErrors('transactionDate')} ? 'is-invalid'">
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('transactionDate')}"
+                                     th:errors="*{transactionDate}">error
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-3">
+                            <label class="form-label" for="description">Description</label>
+                            <textarea id="description" rows="2" class="form-control" th:field="*{description}"
+                                      th:classappend="${#fields.hasErrors('description')} ? 'is-invalid'"
+                                      placeholder="e.g. A3 lamination for 30 banner sheets"></textarea>
+                            <div class="invalid-feedback" th:if="${#fields.hasErrors('description')}"
+                                 th:errors="*{description}">error
+                            </div>
+                        </div>
+
+                        <div class="mt-3">
+                            <label class="form-label d-flex justify-content-between align-items-center">
+                                <span>Tags</span>
+                                <a class="small" th:href="@{/transactions/tags}">Manage tags</a>
+                            </label>
+                            <div class="d-flex flex-wrap gap-3 border rounded p-3"
+                                 th:if="${!#lists.isEmpty(tags)}">
+                                <div class="form-check" th:each="tag : ${tags}">
+                                    <input class="form-check-input" type="checkbox"
+                                           th:id="|tag-${tag.id}|" th:field="*{tagIds}" th:value="${tag.id}">
+                                    <label class="form-check-label" th:for="|tag-${tag.id}|" th:text="${tag.name}">
+                                        Tag
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="form-text" th:if="${#lists.isEmpty(tags)}">
+                                No tags yet - <a th:href="@{/transactions/tags}">create one</a> to segregate
+                                spending by flash cards, banners and so on.
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2 mt-4">
+                            <button class="btn btn-primary flex-fill flex-lg-grow-0" type="submit">Save</button>
+                            <a class="btn btn-outline-secondary flex-fill flex-lg-grow-0"
+                               th:href="@{/transactions}">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

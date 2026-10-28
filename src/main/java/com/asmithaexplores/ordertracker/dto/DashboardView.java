@@ -35,5 +35,18 @@ public class DashboardView {
     private long totalCustomers;
     @Builder.Default
     private BigDecimal revenueThisMonth = BigDecimal.ZERO;
+
+    /** Money actually booked in the ledger this month - see the Finance screen. */
+    @Builder.Default
+    private BigDecimal incomeThisMonth = BigDecimal.ZERO;
+    @Builder.Default
+    private BigDecimal expensesThisMonth = BigDecimal.ZERO;
+    @Builder.Default
+    private BigDecimal profitThisMonth = BigDecimal.ZERO;
+
     private String currentMonthLabel;
+
+    public boolean isProfitableThisMonth() {
+        return profitThisMonth.signum() >= 0;
+    }
 }

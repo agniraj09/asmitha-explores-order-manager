@@ -2,13 +2,18 @@ package com.asmithaexplores.ordertracker.config;
 
 import com.asmithaexplores.ordertracker.dto.OrderForm;
 import com.asmithaexplores.ordertracker.dto.OrderItemForm;
+import com.asmithaexplores.ordertracker.dto.TransactionForm;
 import com.asmithaexplores.ordertracker.entity.Customer;
 import com.asmithaexplores.ordertracker.entity.OrderStatus;
 import com.asmithaexplores.ordertracker.entity.Product;
+import com.asmithaexplores.ordertracker.entity.TransactionCategory;
+import com.asmithaexplores.ordertracker.entity.TransactionTag;
 import com.asmithaexplores.ordertracker.repository.CustomerRepository;
 import com.asmithaexplores.ordertracker.repository.OrderRepository;
 import com.asmithaexplores.ordertracker.repository.ProductRepository;
 import com.asmithaexplores.ordertracker.service.OrderService;
+import com.asmithaexplores.ordertracker.service.TransactionService;
+import com.asmithaexplores.ordertracker.service.TransactionTagService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
@@ -42,11 +47,24 @@ public class DataSeeder implements CommandLineRunner {
     private final ProductRepository productRepository;
     private final OrderRepository orderRepository;
     private final OrderService orderService;
+    private final TransactionService transactionService;
+    private final TransactionTagService transactionTagService;
     private final AppProperties appProperties;
 
     @Override
     @Transactional
     public void run(String... args) {
+        // The tag list is needed on every environment, including an empty production database,
+        // so it is created independently of the demo data flag below.
+        transactionTagService.createDefaultsIfEmpty();
+
+        // Orders placed before the money book existed get their income line now, so the Finance
+        // screens show the full history. A no-op once every order has one.
+        int backfilled = transactionService.backfillMissingOrderIncome();
+        if (backfilled > 0) {
+            log.info("Booked income for {} order(s) that predate the finance feature.", backfilled);
+        }
+
         if (!appProperties.isSeedData()) {
             return;
         }
@@ -59,6 +77,7 @@ public class DataSeeder implements CommandLineRunner {
 
         Map<String, Product> catalogue = seedCatalogue();
         seedCustomersAndOrders(catalogue);
+        seedExpenses();
 
         log.info("Seed complete: {} customers, {} products, {} orders.",
                 customerRepository.count(), productRepository.count(), orderRepository.count());
@@ -181,6 +200,38 @@ public class DataSeeder implements CommandLineRunner {
             throw new IllegalStateException("Seed product not found: " + productName);
         }
         return new OrderItemForm(product.getId(), quantity);
+    }
+
+    /* ------------------------------------------------------------ demo expenses */
+
+    /**
+     * The income side of the money book fills itself from the orders above, so only a few
+     * hand written expenses are needed to make the Finance screen meaningful on a fresh install.
+     */
+    private void seedExpenses() {
+        expense(TransactionCategory.PRINTING, "2400.00", 8,
+                "A4 card stock printing - flash card batch", "Flash Cards");
+        expense(TransactionCategory.PRINTING, "1800.00", 5,
+                "Vinyl banner printing", "Banners");
+        expense(TransactionCategory.PACKING, "450.00", 4,
+                "Bubble wrap and mailer boxes", "Packing material");
+        expense(TransactionCategory.SHIPPING, "320.00", 3,
+                "Courier charges for 2 parcels", "Courier");
+        expense(TransactionCategory.TRANSPORT, "180.00", 3,
+                "Auto fare to the printing shop", "General");
+    }
+
+    private void expense(TransactionCategory category, String amount, int daysAgo,
+                         String description, String tagName) {
+        transactionService.save(TransactionForm.builder()
+                .category(category)
+                .amount(new BigDecimal(amount))
+                .transactionDate(LocalDate.now().minusDays(daysAgo))
+                .description(description)
+                .tagIds(transactionTagService.findByNames(List.of(tagName)).stream()
+                        .map(TransactionTag::getId)
+                        .toList())
+                .build());
     }
 }
 
