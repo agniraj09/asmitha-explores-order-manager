@@ -12,7 +12,16 @@
             <div class="card">
                 <div class="card-body">
                     <h1 class="h4 page-title mb-3"
-                        th:text="${editing} ? 'Edit transaction' : 'Add transaction'">Add transaction</h1>
+                        th:text="${editing}
+                                 ? (${formType?.name()} == 'INCOME' ? 'Edit income' : 'Edit expense')
+                                 : (${formType?.name()} == 'INCOME' ? 'Add income' : 'Add expense')">Add transaction</h1>
+
+                    <div class="alert alert-light border py-2"
+                         th:if="${linkedOrderId == null and formType?.name() == 'INCOME'}">
+                        <i class="bi bi-lightbulb"></i>
+                        Use this for sales that are not in the Orders list - past or offline orders,
+                        for example. Orders created in the app already book their own income.
+                    </div>
 
                     <div class="alert alert-info py-2" th:if="${linkedOrderId != null}">
                         <i class="bi bi-info-circle"></i>
@@ -31,12 +40,17 @@
                             <select id="category" class="form-select" th:field="*{category}"
                                     th:classappend="${#fields.hasErrors('category')} ? 'is-invalid'">
                                 <option value="">-- choose --</option>
+                                <optgroup label="Income" th:if="${formType?.name() == 'INCOME'}">
+                                    <option th:each="c : ${incomeCategories}" th:value="${c.name()}"
+                                            th:text="${c.label}">Category
+                                    </option>
+                                </optgroup>
                                 <optgroup label="Expense">
                                     <option th:each="c : ${expenseCategories}" th:value="${c.name()}"
                                             th:text="${c.label}">Category
                                     </option>
                                 </optgroup>
-                                <optgroup label="Income">
+                                <optgroup label="Income" th:unless="${formType?.name() == 'INCOME'}">
                                     <option th:each="c : ${incomeCategories}" th:value="${c.name()}"
                                             th:text="${c.label}">Category
                                     </option>
@@ -75,7 +89,9 @@
                             <label class="form-label" for="description">Description</label>
                             <textarea id="description" rows="2" class="form-control" th:field="*{description}"
                                       th:classappend="${#fields.hasErrors('description')} ? 'is-invalid'"
-                                      placeholder="e.g. A3 lamination for 30 banner sheets"></textarea>
+                                      th:placeholder="${formType?.name() == 'INCOME'}
+                                          ? 'e.g. Offline sale - 20 flash card sets for Greenfield School'
+                                          : 'e.g. A3 lamination for 30 banner sheets'"></textarea>
                             <div class="invalid-feedback" th:if="${#fields.hasErrors('description')}"
                                  th:errors="*{description}">error
                             </div>

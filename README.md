@@ -24,6 +24,7 @@ Built with **Java 17 · Spring Boot 3 · Spring MVC · Spring Data JPA · Thymel
 | **Finance** (`/transactions`) | The money book. **Income is booked automatically** for every order placed (amount, date and customer taken from the order) and follows it when the order is edited or deleted. **Expenses are added by hand** — printing, packing, shipping charges, transport, materials, other. Filter by type/category/tag/date range and see income, expenses and profit for the current filter, plus breakdowns per category and per tag |
 | **Transaction tags** (`/transactions/tags`) | Your own tag list — Flash Cards, Banners, Courier, Packing material … — with add/edit/delete (delete blocked while a transaction still uses the tag). A transaction can carry **several tags**. Income booked for an order is **auto-tagged with the product categories in that order**, so spend and earnings per product line line up without extra typing |
 | **Correcting booked income** | The income line of an order is editable. Saving your own amount marks it as *adjusted* and later edits to the order no longer overwrite it — your figure wins |
+| **Income from untracked orders** | **Add income** on the Finance screen records a sale that never went through the Orders list — a past or offline order. It is filed under *Order sale* with no order link, so it is never touched by the automatic sync and can be edited or deleted like any manual entry |
 
 ---
 
@@ -272,9 +273,10 @@ merging, forward-only status transitions, the mandatory tracking id for shipping
 restoration on delete.
 
 `TransactionControllerTest` (`@SpringBootTest` + MockMvc, in-memory H2) renders the Finance
-screens and covers saving a tagged expense, validation of the amount, the income line booked when
-an order is placed and removed when it is deleted, and the fact that a hand-corrected income line
-is no longer overwritten by later edits to the order.
+screens and covers saving a tagged expense, recording income for an order that was never tracked
+in the app, validation of the amount, the income line booked when an order is placed and removed
+when it is deleted, and the fact that a hand-corrected income line is no longer overwritten by
+later edits to the order.
 
 ```bash
 mvn test

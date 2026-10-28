@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.LocalDate;
@@ -45,11 +46,16 @@ public class TransactionController {
     }
 
     @GetMapping("/new")
-    public String createForm(Model model) {
+    public String createForm(@RequestParam(required = false) TransactionType type, Model model) {
+        TransactionType requested = type != null ? type : TransactionType.EXPENSE;
+        TransactionCategory defaultCategory = requested == TransactionType.INCOME
+                ? TransactionCategory.ORDER_SALE
+                : TransactionCategory.PRINTING;
         model.addAttribute("transactionForm", TransactionForm.builder()
-                .category(TransactionCategory.PRINTING)
+                .category(defaultCategory)
                 .transactionDate(LocalDate.now())
                 .build());
+        model.addAttribute("formType", requested);
         addFormAttributes(model, false, null);
         return "transactions/form";
     }
@@ -58,6 +64,7 @@ public class TransactionController {
     public String editForm(@PathVariable Long id, Model model) {
         TransactionForm form = transactionService.getForm(id);
         model.addAttribute("transactionForm", form);
+        model.addAttribute("formType", form.getCategory().getType());
         addFormAttributes(model, true, form.getOrderId());
         return "transactions/form";
     }
@@ -68,6 +75,9 @@ public class TransactionController {
                        Model model,
                        RedirectAttributes redirectAttributes) {
         if (bindingResult.hasErrors()) {
+            model.addAttribute("formType", transactionForm.getCategory() != null
+                    ? transactionForm.getCategory().getType()
+                    : TransactionType.EXPENSE);
             addFormAttributes(model, transactionForm.getId() != null, transactionForm.getOrderId());
             return "transactions/form";
         }

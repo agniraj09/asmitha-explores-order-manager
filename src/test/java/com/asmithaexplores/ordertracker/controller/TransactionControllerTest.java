@@ -89,6 +89,35 @@ class TransactionControllerTest {
     }
 
     @Test
+    @DisplayName("The income entry point opens the form ready for an untracked order sale")
+    void incomeFormDefaultsToOrderSale() throws Exception {
+        mockMvc.perform(get("/transactions/new").param("type", TransactionType.INCOME.name()))
+                .andExpect(status().isOk())
+                .andExpect(view().name("transactions/form"))
+                .andExpect(model().attribute("formType", TransactionType.INCOME));
+    }
+
+    @Test
+    @DisplayName("Income from a past order that is not in the system is saved without an order link")
+    void savesManualIncomeForUntrackedOrder() throws Exception {
+        mockMvc.perform(post("/transactions/save")
+                        .param("category", TransactionCategory.ORDER_SALE.name())
+                        .param("amount", "3200.00")
+                        .param("transactionDate", LocalDate.now().minusMonths(2).toString())
+                        .param("description", "Offline sale - 20 flash card sets")
+                        .param("tagIds", String.valueOf(bannerTagId)))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/transactions"));
+
+        List<Transaction> saved = transactionRepository.findAll();
+        assertThat(saved).hasSize(1);
+        assertThat(saved.get(0).getType()).isEqualTo(TransactionType.INCOME);
+        assertThat(saved.get(0).getOrder()).isNull();
+        assertThat(saved.get(0).isSystemGenerated()).isFalse();
+        assertThat(saved.get(0).getAmount()).isEqualByComparingTo("3200.00");
+    }
+
+    @Test
     @DisplayName("A manual expense is saved with the tags that were ticked")
     void savesManualExpenseWithTags() throws Exception {
         mockMvc.perform(post("/transactions/save")
