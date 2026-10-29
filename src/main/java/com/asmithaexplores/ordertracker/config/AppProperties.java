@@ -4,6 +4,9 @@ import lombok.Getter;
 import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Getter
 @Setter
 @ConfigurationProperties(prefix = "app")
@@ -23,6 +26,35 @@ public class AppProperties {
 
     /** Automatic delivery detection for shipped orders. */
     private Tracking tracking = new Tracking();
+
+    /** Seller details printed on the bill. */
+    private Bill bill = new Bill();
+
+    @Getter
+    @Setter
+    public static class Bill {
+
+        /** Business name on the "From" block; falls back to {@link AppProperties#shopName}. */
+        private String sellerName;
+
+        /** Address of the shop, one entry per printed line. */
+        private List<String> addressLines = new ArrayList<>(List.of("OMR", "Chennai - 600097"));
+
+        /** Contact number printed under the shop address. */
+        private String mobile = "9445077125";
+
+        /** Optional email, left out of the bill when blank. */
+        private String email;
+
+        /** Optional GST registration number, left out of the bill when blank. */
+        private String gstin;
+
+        /** Prefix of the bill number, e.g. {@code AE-000017} for order 17. */
+        private String numberPrefix = "AE-";
+
+        /** Closing line at the bottom of the bill. */
+        private String footerNote = "Thank you for shopping with us!";
+    }
 
     @Getter
     @Setter

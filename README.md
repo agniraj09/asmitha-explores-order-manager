@@ -21,6 +21,7 @@ Built with **Java 17 · Spring Boot 3 · Spring MVC · Spring Data JPA · Thymel
 | **Status flow** | Forward-only: `NEW → PRINTING_IN_PROGRESS → PACKED → SHIPPED → DELIVERED`, tracking id mandatory for `SHIPPED` |
 | **Delivery detection** | Shipped orders are polled against the courier's tracking service on a timer and move to `DELIVERED` by themselves — the order page shows the latest courier status, when it was last checked, the reported delivery date and a **Check courier status now** button |
 | **WhatsApp** | Shipped/delivered orders get a "Send on WhatsApp" button that opens a chat with the customer carrying a templated message — tracking id, courier tracking link, items and total. The courier link defaults to `app.tracking-url` and can be overridden per order before sending |
+| **Bill copy** | Every order page has a **Bill copy** button that downloads a one-page A4 PDF — shop address, customer address, items with rate and amount, total quantity, total in figures and in words, order date, tracking id and a "computer generated bill" note. The shop ("From") block comes from `app.bill.*` |
 | **Finance** (`/transactions`) | The money book. **Income is booked automatically** for every order placed (amount, date and customer taken from the order) and follows it when the order is edited or deleted. **Expenses are added by hand** — printing, packing, shipping charges, transport, materials, other. Filter by type/category/tag/date range and see income, expenses and profit for the current filter, plus breakdowns per category and per tag |
 | **Transaction tags** (`/transactions/tags`) | Your own tag list — Flash Cards, Banners, Courier, Packing material … — with add/edit/delete (delete blocked while a transaction still uses the tag). A transaction can carry **several tags**. Income booked for an order is **auto-tagged with the product categories in that order**, so spend and earnings per product line line up without extra typing |
 | **Correcting booked income** | The income line of an order is editable. Saving your own amount marks it as *adjusted* and later edits to the order no longer overwrite it — your figure wins |
@@ -204,6 +205,13 @@ The PostgreSQL driver is already on the classpath — no `pom.xml` change needed
 | `app.seed-data` | — | `true` (local) / `false` (prod) | Seed demo data when the database is empty |
 | `app.shop-name` | — | `Asmitha Explores` | Shop name used in messages |
 | `app.tracking-url` | `TRACKING_URL` | `https://franchexpress.com/courier-tracking/` | Courier tracking link pre-filled in the WhatsApp message; overridable per order in the UI |
+| `app.bill.seller-name` | `BILL_SELLER_NAME` | `Asmitha Explores` | Business name in the "From" block of the bill PDF |
+| `app.bill.address-lines[n]` | — | `OMR`, `Chennai - 600097` | Shop address on the bill, one property per printed line |
+| `app.bill.mobile` | `BILL_MOBILE` | `9445077125` | Contact number on the bill |
+| `app.bill.email` | — | _(unset)_ | Email on the bill; the line is left out when blank |
+| `app.bill.gstin` | — | _(unset)_ | GST number on the bill; the line is left out when blank |
+| `app.bill.number-prefix` | — | `AE-` | Bill number prefix, e.g. `AE-000017` for order 17 |
+| `app.bill.footer-note` | — | `Thank you for shopping with us!` | Closing line at the bottom of the bill |
 | `app.tracking.auto-sync-enabled` | `TRACKING_AUTO_SYNC` | `true` | Poll the courier for shipped orders and auto-move delivered ones |
 | `app.tracking.api-url` | `TRACKING_API_URL` | `https://franchexpress.com/proxy.php` | Endpoint behind the courier's tracking page |
 | `app.tracking.interval-ms` | `TRACKING_SYNC_INTERVAL_MS` | `21600000` (6 hours) | How often the delivery sync runs |
@@ -228,11 +236,12 @@ src/main/java/com/asmithaexplores/ordertracker
 ├── OrderTrackerApplication.java
 ├── config/      AppProperties, DataSeeder (real storefront catalogue)
 ├── controller/  DashboardController, CustomerController, ProductController,
-│                OrderController, TransactionController, TransactionTagController,
+│                OrderController, BillController, AddressLabelController,
+│                TransactionController, TransactionTagController,
 │                GlobalExceptionHandler
 ├── dto/         CustomerForm/View, ProductForm/View, OrderForm, OrderItemForm,
 │                OrderView, OrderItemView, OrderEditForm, OrderFilter,
-│                OrderCreationResult, DashboardView,
+│                OrderCreationResult, DashboardView, BillView, AddressLabelView,
 │                TransactionForm/View/Filter/Summary, TransactionTagForm/View
 ├── entity/      Customer, Product, Order, OrderItem, OrderStatus,
 │                Transaction, TransactionTag, TransactionType, TransactionCategory
@@ -242,7 +251,7 @@ src/main/java/com/asmithaexplores/ordertracker
 ├── tracking/    CourierTrackingClient, FranchExpressTrackingClient,
 │                DeliveryStatusSyncService, TrackingSnapshot, TrackingEvent
 └── service/     CustomerService, ProductService, OrderService, DashboardService,
-                 TransactionService, TransactionTagService
+                 BillService (order bill as PDF), TransactionService, TransactionTagService
 
 src/main/resources
 ├── application.properties          common settings (active profile = local by default)
@@ -253,6 +262,8 @@ src/main/resources
                  customers/{list,form,detail}.html,
                  products/{list,form}.html,
                  orders/{list,form,detail}.html,
+                 bills/bill.html (A4 bill copy rendered to PDF),
+                 labels/addresses.html,
                  transactions/{list,form,tags}.html
 
 src/test/resources
@@ -261,7 +272,7 @@ src/test/resources
 src/test/java/com/asmithaexplores/ordertracker
 ├── OrderTrackerApplicationTests.java
 ├── controller/TransactionControllerTest.java
-└── service/OrderServiceTest.java
+└── service/{OrderServiceTest,BillServiceTest}.java
 ```
 
 ---
